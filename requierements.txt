@@ -1,0 +1,5 @@
+git+https://github.com/pygfx/shadertoy@wip-multipass
+wgpu==0.18.1
+glfw
+tqdm
+requests
