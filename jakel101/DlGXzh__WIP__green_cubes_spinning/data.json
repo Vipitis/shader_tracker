@@ -1,0 +1,32 @@
+{
+  "ver": "0.1",
+  "info": {
+    "id": "DlGXzh",
+    "date": "1685912946",
+    "viewed": 173,
+    "name": "(WIP) green cubes spinning",
+    "username": "jakel101",
+    "description": "starting with https://www.shadertoy.com/view/MsX3zr with ideas of https://www.youtube.com/watch?v=O8kAFhSqFdM to recreate the winner of this https://www.instagram.com/p/CrtGz89OUSb/",
+    "likes": 1,
+    "published": 3,
+    "flags": 0,
+    "usePreview": 0,
+    "tags": [
+      "3d",
+      "raymarching",
+      "distancefield",
+      "mouse"
+    ],
+    "hasliked": 0
+  },
+  "renderpass": [
+    {
+      "inputs": [],
+      "outputs": [],
+      "code": "// forked from \"Cubes and Spheres\" by @paulofalcao https://www.shadertoy.com/view/MsX3zr\n\n//Scene Start\n\nvec2 sim2d( in vec2 p, in float s)\n{\n   vec2 ret=p;\n   ret=p+s/2.0;\n   ret=fract(ret/s)*s-s/2.0;\n   return ret;\n}\n\nvec3 stepspace( in vec3 p, in float s)\n{\n  vec3 grid = p-mod(p-s/2.0,s);\n  return grid;\n}\n\n//Object\nfloat obj(in vec3 p)\n{ \n  vec3 fp=stepspace(p,2.0);;\n  float d=2.0+sin(iTime); //y (height) location of the cubes\n  d = d * 1.0/length(.1*p.xz) + 2.0; // this block hole kinda thing in the center. Perhaps I can modify the 2D grid stuff to get an empty center.\n  if (p.x>1.0) d= -5.0; // this moves one half of the cubes higher.\n  p.y=p.y+d;\n  p.xz=sim2d(p.xz,2.0);\n  //c1 is IQ RoundBox from https://iquilezles.org/articles/distfunctions\n  float c1=length(max(abs(p)-vec3(0.7,0.7,0.7),0.0))-0.15;\n  //c2 is a taller cuboid\n  float c2=length(max(abs(p)-vec3(0.3,0.9,0.4),0.0))-0.15;\n  float cf=sin(iTime)*0.5+0.5;\n  return mix(c1,c2,cf);\n}\n\n//Object Color\nvec3 obj_c(vec3 p)\n{\n  vec2 fp=sim2d(p.xz-15.0,16.0);\n  if (fp.y>4.0) fp.x=-fp.x;\n  if (fp.x>0.0) return vec3(0.0,1.0,0.0);\n    else return vec3(0.0,0.1,0.0);\n}\n\n//Scene End\n\n\n//Raymarching Framework Start\n\nfloat PI=3.14159265;\n\nvec3 phong(\n  in vec3 pt,\n  in vec3 prp,\n  in vec3 normal,\n  in vec3 light,\n  in vec3 color,\n  in float spec,\n  in vec3 ambLight)\n{\n   vec3 lightv=normalize(light-pt);\n   float diffuse=dot(normal,lightv);\n   vec3 refl=-reflect(lightv,normal);\n   vec3 viewv=normalize(prp-pt);\n   float specular=pow(max(dot(refl,viewv),0.0),spec);\n   return (max(diffuse,0.0)+ambLight)*color+specular;\n}\n\nfloat raymarching(\n  in vec3 prp,\n  in vec3 scp,\n  in int maxite,\n  in float precis,\n  in float startf,\n  in float maxd,\n  out int objfound)\n{ \n  const vec3 e=vec3(0.1,0,0.0);\n  float s=startf;\n  vec3 c,p,n;\n  float f=startf;\n  objfound=1;\n  for(int i=0;i<256;i++){\n    if (abs(s)<precis||f>maxd||i>maxite) break;\n    f+=s;\n    p=prp+scp*f;\n    s=obj(p);\n  }\n  if (f>maxd) objfound=-1;\n  return f;\n}\n\nvec3 camera(\n  in vec3 prp,\n  in vec3 vrp,\n  in vec3 vuv,\n  in float vpd,\n  in vec2 fragCoord)\n{\n  vec2 vPos=-1.0+2.0*fragCoord.xy/iResolution.xy;\n  vec3 vpn=normalize(vrp-prp);\n  vec3 u=normalize(cross(vuv,vpn));\n  vec3 v=cross(vpn,u);\n  vec3 scrCoord=prp+vpn*vpd+vPos.x*u*iResolution.x/iResolution.y+vPos.y*v;\n  return normalize(scrCoord-prp);\n}\n\nvec3 normal(in vec3 p)\n{\n  //tetrahedron normal\n  const float n_er=0.01;\n  float v1=obj(vec3(p.x+n_er,p.y-n_er,p.z-n_er));\n  float v2=obj(vec3(p.x-n_er,p.y-n_er,p.z+n_er));\n  float v3=obj(vec3(p.x-n_er,p.y+n_er,p.z-n_er));\n  float v4=obj(vec3(p.x+n_er,p.y+n_er,p.z+n_er));\n  return normalize(vec3(v4+v1-v3-v2,v3+v4-v1-v2,v2+v4-v3-v1));\n}\n\nvec3 render(\n  in vec3 prp,\n  in vec3 scp,\n  in int maxite,\n  in float precis,\n  in float startf,\n  in float maxd,\n  in vec3 background,\n  in vec3 light,\n  in float spec,\n  in vec3 ambLight,\n  out vec3 n,\n  out vec3 p,\n  out float f,\n  out int objfound)\n{ \n  objfound=-1;\n  f=raymarching(prp,scp,maxite,precis,startf,maxd,objfound);\n  if (objfound>0){\n    p=prp+scp*f;\n    vec3 c=obj_c(p);\n    n=normal(p);\n    vec3 cf=phong(p,prp,n,light,c,spec,ambLight);\n    return vec3(cf);\n  }\n  f=maxd;\n  return vec3(background); //background color\n}\n\nvoid mainImage( out vec4 fragColor, in vec2 fragCoord ){\n \n  //Camera animation\n  vec3 vuv=vec3(0,1,0);\n  vec3 vrp=vec3(0.0,0.0,0.0);\n  float mx=iMouse.x/iResolution.x*PI*2.0+(iTime*0.3);\n  float my=iMouse.y/iResolution.y*PI/2.01;\n  // my = 0.05; // stuck view angle by inputting a mouse?\n  if ((iMouse.x<=0.0)||(iMouse.y<=0.0)){mx=1.0,my=0.05;};//quick hack to detect no mouse input for thumbnail\n  // mx =+ iTime * 0.3; // rotation by time\n  vec3 prp=vrp+vec3(cos(my)*cos(mx),sin(my),cos(my)*sin(mx))*12.0; //Trackball style camera pos\n  float vpd=1.5;\n  vec3 light=prp+vec3(5.0,0,5.0);\n  \n  vec3 scp=camera(prp,vrp,vuv,vpd,fragCoord);\n  vec3 n,p;\n  float f;\n  int o;\n  const float maxe=0.01;\n  const float startf=0.1;\n  const vec3 backc=vec3(0.0,0.0,0.0);\n  const float spec=8.0;\n  const vec3 ambi=vec3(0.1,0.1,0.1);\n  \n  vec3 c1=render(prp,scp,256,maxe,startf,60.0,backc,light,spec,ambi,n,p,f,o);\n  c1=c1*max(1.0-f*.015,0.0);\n  vec3 c2=backc;\n  if (o>0){\n    scp=reflect(scp,n);\n    c2=render(p+scp*0.05,scp,32,maxe,startf,10.0,backc,light,spec,ambi,n,p,f,o);\n  }\n  c2=c2*max(1.0-f*.1,0.0);\n  fragColor=vec4(c1.xyz*0.75+c2.xyz*0.25,1.0);\n}",
+      "name": "Image",
+      "description": "",
+      "type": "image"
+    }
+  ]
+}

@@ -1,0 +1,87 @@
+{
+  "ver": "0.1",
+  "info": {
+    "id": "lXK3WV",
+    "date": "1718307576",
+    "viewed": 144,
+    "name": "particle gravity simulation test",
+    "username": "jakel101",
+    "description": "shader to implement a very basic physics simulation using buffers. Use mouse+click as a wrongly scaled gravity attractor!\nalt+downarrow to reload\nconstants to edit in Common",
+    "likes": 1,
+    "published": 3,
+    "flags": 32,
+    "usePreview": 0,
+    "tags": [
+      "simulation",
+      "particles",
+      "physics"
+    ],
+    "hasliked": 0
+  },
+  "renderpass": [
+    {
+      "inputs": [
+        {
+          "id": 257,
+          "src": "/media/previz/buffer00.png",
+          "ctype": "buffer",
+          "channel": 0,
+          "sampler": {
+            "filter": "nearest",
+            "wrap": "clamp",
+            "vflip": "true",
+            "srgb": "false",
+            "internal": "byte"
+          },
+          "published": 1
+        }
+      ],
+      "outputs": [
+        {
+          "id": 37,
+          "channel": 0
+        }
+      ],
+      "code": "// Apache 2.0 license for this Shader :)\n\n// the main Image pass loads information from the Buffers\n// then draws particles to the canvas\n\nfloat sdCircle(vec2 pos, float r){\n    return length(pos) - r;\n}\n\nvoid mainImage( out vec4 fragColor, in vec2 fragCoord )\n{\n    // uv is set to the center\n    vec2 uv = (2.0*fragCoord - iResolution.xy)/iResolution.y;\n    // scale it a little so we can see the bounds\n    uv *= SCALE;\n    \n    vec4 data = texture(iChannel0, uv);\n    \n    vec2 p = data.xy;\n    vec2 vel = data.zw;\n    float ball = sdCircle(uv - p, RADIUS);\n    \n    vec3 col = vec3(ball < 0.0, vec2(0.2));\n    \n    // ouside area, with indicator bars\n    if (abs(uv.x) > WIDTH ) {\n        col.rgb = vec3(0.0);\n        col.g = float(uv.y > 0.0 && uv.y < vel.y*(SCALE+1.0));\n        col.r = float(uv.y < 0.0 && uv.y > vel.y*(SCALE+1.0));\n        \n    }   \n    if (abs(uv.y) > HEIGHT) {\n        col.rgb = vec3(0.0);\n        col.g = float(uv.x > 0.0 && uv.x < vel.x*(SCALE+1.0));\n        col.r = float(uv.x < 0.0 && uv.x > vel.x*(SCALE+1.0));\n    }\n    \n    \n    fragColor = vec4(col,1.0);\n}",
+      "name": "Image",
+      "description": "",
+      "type": "image"
+    },
+    {
+      "inputs": [],
+      "outputs": [],
+      "code": "// the common pass holds various constants that change the simulation\n\n# define SIM_SPEED 20.0\n# define GRAVITY 0.01\n# define ATTRACT 0.02\n# define RADIUS 0.1\n# define WIDTH 1.6\n# define HEIGHT 1.0\n# define SCALE 1.1\n# define BOUNCE 0.9\n\n// not yet implemented\n# define NUM_PARTICLES 1",
+      "name": "Common",
+      "description": "",
+      "type": "common"
+    },
+    {
+      "inputs": [
+        {
+          "id": 257,
+          "src": "/media/previz/buffer00.png",
+          "ctype": "buffer",
+          "channel": 0,
+          "sampler": {
+            "filter": "nearest",
+            "wrap": "clamp",
+            "vflip": "true",
+            "srgb": "false",
+            "internal": "byte"
+          },
+          "published": 1
+        }
+      ],
+      "outputs": [
+        {
+          "id": 257,
+          "channel": 0
+        }
+      ],
+      "code": "// the Buffer A pass holds information about each particle\n// the Red and Green channels are X and Y coordinates\n// the Blue and Alpha channels are X and Y velocity\n// you first load the previous buffer and then do a simulation step.\n// Buffer A gets rendered before Image.\n\n\nvoid mainImage( out vec4 fragColor, in vec2 fragCoord )\n{\n    // uv is set to the center\n    vec2 uv = (2.0*fragCoord - iResolution.xy)/iResolution.y;\n    vec2 m = (2.0*iMouse.xy - iResolution.xy)/iResolution.y;\n        \n    // load previous state\n    vec4 data = texture(iChannel0, uv);    \n    vec2 pos = data.xy;\n    vec2 vel = data.zw;\n    \n    // on initialization, add a bit of sideways motion and start top left\n    if (iFrame == 0) {\n        vel.x += 0.5;\n        pos.x += -WIDTH + RADIUS * 2.0;\n        pos.y += HEIGHT - RADIUS * 2.0;\n    }\n    \n    //mouse attractor, with a factor, only active when mouse is held down\n    vel += (m-pos) * ATTRACT * max(0.0,sign(iMouse.z));   \n    \n    // add gravity\n    vel.y -= GRAVITY * (pos.y+1.0);\n    \n        \n    // move to next position\n    vec2 new_pos = pos + vel * iTimeDelta * SIM_SPEED;\n\n    \n    // simple collision and reflection\n    if (abs(new_pos.x) + RADIUS >= WIDTH) {\n        vel.x *= -BOUNCE;\n        new_pos.x = pos.x;// + (abs(new_pos).x-WIDTH)*vel.x;\n        \n    }\n    if (abs(new_pos.y) + RADIUS >= HEIGHT) {\n        vel.y *= -BOUNCE;\n        new_pos.y = pos.y;// + (abs(new_pos).y-WIDTH)*vel.y;\n        vel.x *= 0.99; //friction\n    }\n    \n    \n\n    fragColor = vec4(new_pos, vel);\n}",
+      "name": "Buffer A",
+      "description": "",
+      "type": "buffer"
+    }
+  ]
+}

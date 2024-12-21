@@ -1,0 +1,35 @@
+{
+  "ver": "0.1",
+  "info": {
+    "id": "4XdcRr",
+    "date": "1734655998",
+    "viewed": 36,
+    "name": "undefined bitshift test",
+    "username": "jakel101",
+    "description": "the spec says that bitshifts greater than 31 bits are undefined. and the signed bit gets pushed away to.\nSo what do you see here?",
+    "likes": 0,
+    "published": 3,
+    "flags": 0,
+    "usePreview": 0,
+    "tags": [
+      "test",
+      "bug"
+    ],
+    "hasliked": 0
+  },
+  "renderpass": [
+    {
+      "inputs": [],
+      "outputs": [
+        {
+          "id": 37,
+          "channel": 0
+        }
+      ],
+      "code": "// Apache 2.0 no patents \u00b0!\u00b0\n\n\n// shows the range from what happens with\n// 1. negative bitshifts -16..-1]\n// 2. defined bitshifts 0..31]\n// 3. undefined bitshifts [32..\n// 4. uint vs int (left vs right)\nvoid mainImage( out vec4 fragColor, in vec2 fragCoord )\n{\n    // Normalized pixel coordinates (from 0 to 1)\n    vec2 uv = fragCoord/iResolution.xy;    \n    \n    // the initial value we are shifting (up)\n    uint init = 1u;\n    \n    int x_shift = int(mod(uv.x * 128.0, 64.0))-16; // so it goes -16..48 twice\n    vec3 col;\n    // left half int\n    if (uv.x < 0.5){\n        int val = int(init);\n        val <<= x_shift;\n        col = vec3(float(log2(float(val)))<uv.y*32.0);\n        // TODO: show the individual bits instead of just the highest bit value...\n    }\n    // right half uint\n    else {\n        uint val2 = uint(init);\n        val2 <<= x_shift;\n        col = vec3(float(log2(float(val2)))<uv.y*32.0);\n        col.g *= 0.5; // indicate the uint side better\n    }\n    if (floor(uv.y*32.0) == 31.0) col.gb -= 1.0; // visualize the sign bit\n    fragColor = vec4(col,1.0);\n}",
+      "name": "Image",
+      "description": "",
+      "type": "image"
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "ver": "0.1",
+  "info": {
+    "id": "cltfRn",
+    "date": "1700872767",
+    "viewed": 137,
+    "name": "naga panic:index out of bounds",
+    "username": "jakel101",
+    "description": "investigating a naga panic during validation. In combination with macros, constants and maybe Swizzles and end up with an index out of bounds error",
+    "likes": 0,
+    "published": 3,
+    "flags": 0,
+    "usePreview": 0,
+    "tags": [
+      "test",
+      "error"
+    ],
+    "hasliked": 0
+  },
+  "renderpass": [
+    {
+      "inputs": [],
+      "outputs": [
+        {
+          "id": 37,
+          "channel": 0
+        }
+      ],
+      "code": "#define MIX2(c) mix(c, c, 0.5)\n\nconst vec2 blank = MIX2(vec2(0.0,1.0));\nvoid mainImage( out vec4 fragColor, in vec2 fragCoord )\n{\n    vec2 uv = fragCoord/iResolution.xy;\n    \n    vec2 col = MIX2(uv);\n    \n    fragColor = vec4(col,0.5,1.0);\n}\n",
+      "name": "Image",
+      "description": "",
+      "type": "image"
+    }
+  ]
+}

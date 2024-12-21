@@ -1,0 +1,37 @@
+{
+  "ver": "0.1",
+  "info": {
+    "id": "M3fyR8",
+    "date": "1733178754",
+    "viewed": 73,
+    "name": "Party Lights for Live Coding!",
+    "username": "jakel101",
+    "description": "hommage to TM Rave!\ncontributions, golfing welcome, use as you please!",
+    "likes": 0,
+    "published": 3,
+    "flags": 0,
+    "usePreview": 0,
+    "tags": [
+      "lights",
+      "overlay",
+      "party",
+      "golf"
+    ],
+    "hasliked": 0
+  },
+  "renderpass": [
+    {
+      "inputs": [],
+      "outputs": [
+        {
+          "id": 37,
+          "channel": 0
+        }
+      ],
+      "code": "// Apache 2.0 no patetns\u00b0^\u00b0 remixes welcome!\n/* Fragment shader implementation of the TM Rave plugin for Trackmania\n* link to original plugin: https://openplanet.dev/plugin/tmrave\n* Meant for your live coding sessions where you want a bit more to show for the audience\n* no more pausing time while coding!\n* reference implementation at https://github.com/TheMatrixPill/tmrave/tree/main/source (MIT licensed)\n* default settings are hard coded here: 2 lights, two corners, 0.2 intensity, no randomness\n*/\n#define PI 3.14159\nvec4 rave(vec2 uv){\n    // uv is expected to be screen space from 0.0 to 1.0, aspect ratio irrelevant.\n    float width = 0.15;\n    float edge = 1.5/iResolution.y;\n    \n    // top left\n    float phase1 = abs(fract(iTime)-0.5)*PI;\n    vec2 pos1 = vec2(0.0, 1.0);\n    vec2 n1 = vec2(sin(phase1 - width), cos(phase1 - width));\n    vec2 n2 = vec2(sin(phase1 + width), cos(phase1 + width));\n    float e1 = dot(uv-pos1, n1);\n    float e2 = dot(uv-pos1, n2);\n    float mask1 = clamp(smoothstep(edge, 0.0, max(e1,-e2)), 0.0, 1.0);\n    \n    // TODO: can you not repeat yourself ... will sleep through the idea once.\n    // top left\n    float phase2 = (abs(fract(iTime+0.5)-0.5)+0.5)*PI;\n    vec2 pos2 = vec2(1.0, 1.0);\n    vec2 n3 = vec2(sin(phase2 - width), cos(phase2 - width));\n    vec2 n4 = vec2(sin(phase2 + width), cos(phase2 + width));\n    float e3 = dot(uv-pos2, n3);\n    float e4 = dot(uv-pos2, n4);\n    float mask2 = clamp(smoothstep(edge, 0.0, max(e3,-e4)), 0.0, 1.0);\n    \n    float mask = mask1 + mask2;\n    // RGB rotation like this?\n    vec4 col = vec4(normalize(sin(PI*(iTime+vec3(0.0, 2.0/3.0, 4.0/3.0)))), 1.0);\n    col *= mask;\n    col *= 0.2; // default light intensity\n    return col;\n}\n\n// your normal main funciton\nvoid mainImage( out vec4 fragColor, in vec2 fragCoord )\n{\n    vec2 uv = fragCoord/iResolution.xy;\n    vec3 col = vec3(0.05);\n    // your normal output\n    fragColor = vec4(col,1.0);\n    // sneaky addition of party lights, do this early for enjoyment!\n    fragColor += rave(fragCoord/iResolution.xy);\n}",
+      "name": "Image",
+      "description": "",
+      "type": "image"
+    }
+  ]
+}

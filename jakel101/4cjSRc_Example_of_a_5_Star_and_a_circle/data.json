@@ -1,0 +1,35 @@
+{
+  "ver": "0.1",
+  "info": {
+    "id": "4cjSRc",
+    "date": "1706631985",
+    "viewed": 141,
+    "name": "Example of a 5-Star and a circle",
+    "username": "jakel101",
+    "description": "Little test shader to explain different levels of model generation are classified in https://huggingface.co/spaces/Vipitis/shadermatch",
+    "likes": 4,
+    "published": 3,
+    "flags": 0,
+    "usePreview": 0,
+    "tags": [
+      "2d",
+      "test"
+    ],
+    "hasliked": 0
+  },
+  "renderpass": [
+    {
+      "inputs": [],
+      "outputs": [
+        {
+          "id": 37,
+          "channel": 0
+        }
+      ],
+      "code": "#define PI 3.141593\n\n// signed distance to a 5-star, modifed from iq: https://www.shadertoy.com/view/3tSGDy\nfloat sdStar(in vec2 p, in float r) // m=[2,n]\n{\n    // these 4 lines can be precomputed for a given shape\n    float n = 5.0;\n    float an = PI/n;\n    float en = PI/(2.0*n/(n-2.0)); // should be 3.333333 so it's regular (jump over 2!)\n    vec2  acs = vec2(cos(an),sin(an));\n    vec2  ecs = vec2(cos(en),sin(en)); // ecs=vec2(0,1) and simplify, for regular polygon,\n\n    // symmetry (optional)\n    p.x = abs(p.x);\n    \n    // reduce to first sector\n    float bn = mod(atan(p.x,p.y),2.0*an) - an;\n    p = length(p)*vec2(cos(bn),abs(sin(bn)));\n\n    // line sdf\n    p -= r*acs;\n    p += ecs*clamp( -dot(p,ecs), 0.0, r*acs.y/ecs.y);\n    return length(p)*sign(p.x);\n}\n\n// signed distance function of a circle, simple base case\nfloat sdCircle(in vec2 p, in float r) {\n    return length(p) -r;\n}\n\n// (orig: text_match) sigmoid smooth min via iq: https://iquilezles.org/articles/smin/\nfloat smin( float a, float b, float k )\n{\n    float x = b-a;\n    return a + x/(1.0-exp2(x/k));\n}\n\n// (image_match) changed variable names, should work\nfloat smin1( float a, float b, float k )\n{\n    float diff = b-a;\n    float bias = 1.0-exp2(diff/k);\n    return a + diff/bias;\n}\n\n// (altered: variation) root smooth min via iq: https://iquilezles.org/articles/smin/\nfloat smin2( float a, float b, float k )\n{\n    float x = b-a;\n    return 0.5*( a+b-sqrt(x*x+k) );\n}\n\n// (single_color) this one compiles but gives an single color image\nfloat smin3( float a, float b, float k )\n{\n    float g = 2.0*a/k-b;\n    return 0.187;\n}\n\n\n// (code_error) the model generated a full function, but the shadercode does not compile\n// float smin4( float a, float b, float k )\n// {\n//    float z = a*b;\n//     return vec2(min(z, b), k*b);\n// }\n// (incomplete_generation) the model gets stuck and does not generate a full function\n// float smin5( float a, float b, float k )\n// {\n//    float f = 2.0*a/k-b;\n//    float g = 3.0*a/k-b;\n//    float h = 4.0*a/k-b;\n//    float i = 5.0*a/k-b;\n//    float j = 6.0*a/k-b;//incomplete generation!\n\n\nvoid mainImage( out vec4 fragColor, in vec2 fragCoord )\n{\n    vec2 uv = (2.0*fragCoord - iResolution.xy)/iResolution.y;\n\n\n    vec3 col = vec3(0.0);\n    \n    float s = sin(iTime - 0.6) + 1.0;\n    \n    float d;\n    \n    float star = sdStar(uv - vec2(0.5,0.0), s);\n    float circle = sdCircle(uv -vec2(-0.5,0.0) , 0.4);\n    \n    d = smin(star, circle, 0.05);\n    \n    \n    col.r += pow(-d, .1);\n    col.g += abs(d);\n    col.b += pow(abs(d), 0.4);\n    \n    fragColor = vec4(col,1.0);\n}",
+      "name": "Image",
+      "description": "",
+      "type": "image"
+    }
+  ]
+}

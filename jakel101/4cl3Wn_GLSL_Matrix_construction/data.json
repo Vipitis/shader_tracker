@@ -1,0 +1,35 @@
+{
+  "ver": "0.1",
+  "info": {
+    "id": "4cl3Wn",
+    "date": "1702942180",
+    "viewed": 187,
+    "name": "GLSL Matrix construction",
+    "username": "jakel101",
+    "description": "Definition: https://www.khronos.org/opengl/wiki/Data_Type_(GLSL)#Matrix_constructors\nHowever it is possible (and often done on shadertoy) to construct a mat2 form a vec4.\nIt's not possible to construct a mat2 from a single vec2 on shadertoy?",
+    "likes": 0,
+    "published": 3,
+    "flags": 0,
+    "usePreview": 0,
+    "tags": [
+      "test",
+      "error"
+    ],
+    "hasliked": 0
+  },
+  "renderpass": [
+    {
+      "inputs": [],
+      "outputs": [
+        {
+          "id": 37,
+          "channel": 0
+        }
+      ],
+      "code": "void mainImage( out vec4 fragColor, in vec2 fragCoord )\n{\n    // \"identity\" matrix\n    mat2 a = mat2(0.1);\n    \n    // from vec2: 1 does not work, 2 works\n    // mat2 b1 = mat2(vec2(0.2));\n    mat2 b2 = mat2(vec2(0.2), vec2(0.2));\n    \n    // with two floats\n    mat2 c = mat2(0.3, 0.3, 0.3, 0.3);\n    \n    // with a vec4\n    mat2 d = mat2(vec4(0.4));\n    \n    // some mixture of vec2 and float: e1 and e2 aren't enough components, e3-e5 work\n    // mat2 e1 = mat2(vec2(0.5), 0.5);\n    // mat2 e2 = mat2(0.5, vec2(0.5));\n    mat2 e3 = mat2(vec2(0.5), 0.5, 0.5);\n    mat2 e4 = mat2(0.5, vec2(0.5), 0.5);\n    mat2 e5 = mat2(0.5, 0.5, vec2(0.5));\n    mat2 e6 = mat2(0.5, 0.5, 0.5, vec2(0.5));\n    \n    vec4 col = vec4(a+b2+c+e3+e4+e5+e6);\n    // Output to screen\n    fragColor = vec4(col);\n}",
+      "name": "Image",
+      "description": "",
+      "type": "image"
+    }
+  ]
+}

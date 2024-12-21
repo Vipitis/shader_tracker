@@ -1,0 +1,35 @@
+{
+  "ver": "0.1",
+  "info": {
+    "id": "DdlcRf",
+    "date": "1687052642",
+    "viewed": 141,
+    "name": "(WIP) a Wug at TaCoS",
+    "username": "jakel101",
+    "description": "learning some more shader programming by recreating some graphics\nmouse controls the shape of them.",
+    "likes": 0,
+    "published": 3,
+    "flags": 0,
+    "usePreview": 0,
+    "tags": [
+      "2d",
+      "logo"
+    ],
+    "hasliked": 0
+  },
+  "renderpass": [
+    {
+      "inputs": [],
+      "outputs": [
+        {
+          "id": 37,
+          "channel": 0
+        }
+      ],
+      "code": "// no additional license restrictions, would love to learn about your projects!\n\nvoid mainImage( out vec4 fragColor, in vec2 fragCoord )\n{\n    // Normalized pixel coordinates (from -1 to 1 in the center square)\n    vec2 uv = (fragCoord * 2.0 - iResolution.xy) / iResolution.y;\n    \n    \n    // set all pixels to grey\n    vec3 col = vec3(0.23);\n    \n    // slanted blue box on the left\n    float thickness = 0.02;\n    float slant = -0.25;\n    \n    float width = iMouse.x/iResolution.x;\n    if (iMouse.x<=0.0) {width = 0.3;};\n    float height = iMouse.y/iResolution.y;\n    if (iMouse.y<=0.0) {height = 0.5;};\n    vec2 wug_pos = vec2(-0.4, 0.0);\n    \n    \n    float b = smoothstep(width+thickness,width,abs(uv.x-wug_pos.x+(uv.y*slant)));\n    b *= smoothstep(height+thickness,height,abs(uv.y-wug_pos.y));\n    \n    col.b += b;\n    \n    //joke: eye\n    vec2 eye_pos = vec2(wug_pos.x + 0.6*width, wug_pos.y + 0.7*height);\n    float w = 1.0-smoothstep(0.0, thickness, length(uv-eye_pos)- thickness);\n    col += vec3(w);\n    \n    //legs\n    float leg_length = height*0.4;\n    float leg_slant = sin(iTime) * 0.6;\n    //y component first\n    float wug_bottom = wug_pos.y-(height);\n    float l = smoothstep(wug_bottom+thickness, wug_bottom, uv.y-wug_pos.y);\n    l *= smoothstep(wug_bottom-leg_length, wug_bottom-leg_length+thickness, uv.y-wug_pos.y);\n    // x components\n    float l_1 = smoothstep(thickness,0.0,abs(uv.x-wug_pos.x+(uv.y*(slant+leg_slant))));\n    float l_2 = smoothstep(thickness,0.0,abs(uv.x-wug_pos.x+(uv.y*(slant-leg_slant))));\n    l *= (l_1 + l_2); // combine to legs\n    col -= l;\n    \n    //feet\n    float feet_length = leg_length * width;\n    float leg_end = wug_bottom-leg_length;\n    float f = smoothstep(leg_end+thickness, leg_end, uv.y-wug_pos.y);\n    f *= smoothstep(leg_end-thickness, leg_end, uv.y-wug_pos.y);\n    vec2 f_1_pos = vec2(uv.x-wug_pos.x+(uv.y*(slant+leg_slant)), leg_end);\n    vec2 f_2_pos = vec2(uv.x-wug_pos.x+(uv.y*(slant-leg_slant)), leg_end);\n    float f_1 = smoothstep(leg_length+thickness,leg_length,abs(f_1_pos.x-0.15)+feet_length);\n    float f_2 = smoothstep(leg_length+thickness,leg_length,abs(f_2_pos.x-0.15)+feet_length);\n    f *= (f_1 + f_2);\n    col -= f;\n    \n    \n    \n    //add red circle on top\n    float d = length(uv-eye_pos);\n    d -= sin(iTime*2.5)*0.03;\n    d = smoothstep(4.0*thickness, 0.0, d);\n    col.r += d;\n\n    // Output to screen (add alpha)\n    fragColor = vec4(col,1.0);\n}",
+      "name": "Image",
+      "description": "",
+      "type": "image"
+    }
+  ]
+}

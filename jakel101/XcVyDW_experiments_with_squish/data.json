@@ -1,0 +1,36 @@
+{
+  "ver": "0.1",
+  "info": {
+    "id": "XcVyDW",
+    "date": "1731888580",
+    "viewed": 84,
+    "name": "experiments with squish",
+    "username": "jakel101",
+    "description": "[mouse control on]\njust trying to come up with some implementation of squishing myself... not quite sure what's possible\nwant to extend this to 3D one day and also use in a physics simulation...",
+    "likes": 2,
+    "published": 3,
+    "flags": 0,
+    "usePreview": 0,
+    "tags": [
+      "2d",
+      "physics",
+      "amorphous"
+    ],
+    "hasliked": 0
+  },
+  "renderpass": [
+    {
+      "inputs": [],
+      "outputs": [
+        {
+          "id": 37,
+          "channel": 0
+        }
+      ],
+      "code": "// Apache 2.0\n// no patents :^\n\n\nfloat sdCircle(vec2 pos, float rad){\n    return (length(pos) - rad);\n}\n\n\nfloat sdFloor(vec2 pos, float height){\n    // normal?\n    // return normalize(vec2(0.0, 1.0));\n    return pos.y - height;\n}\n\n// a more general variant would take a direction vector as input\n// such as the normal of the collision? and then squish in the perpedicular of that\nfloat sdSquish(vec2 pos, float mag, float rad){\n    // squished space transform?\n    mag = 1.0 - mag;\n    vec2 st = vec2(pos.x*mag, pos.y/mag);\n    float ball = sdCircle(st, rad);\n    return ball;\n}\n\nvoid mainImage( out vec4 fragColor, in vec2 fragCoord )\n{\n    // Normalized pixel coordinates (from -1 to 1)\n    vec2 uv = (fragCoord * 2.0 - iResolution.xy)/min(iResolution.x, iResolution.y);\n    vec2 mou = (iMouse.xy * 2.0 - iResolution.xy)/min(iResolution.x, iResolution.y);\n\n    vec2 ball_pos = 0.6*vec2(sin(iTime), cos(iTime));\n    float ball_size = 0.1;\n    if (sign(iMouse.z) > 0.0){\n        ball_pos = mou;\n    }\n    float floor_height = -0.35 + sin(uv.x*30.0)*0.005; //remove the sin to get a difference experience\n    vec2 squish_pos = ball_pos;\n    \n    // this should probably not be constant and contain some part of uv.y to make the\n    // squish less uniform.\n    float squish_depth = max(0.0,floor_height-ball_pos.y+ball_size);\n    if (squish_depth > 0.0) {\n        squish_pos.y = floor_height + (ball_size*(1.0 - squish_depth));\n    }\n    \n    float ball_dist = sdCircle(uv - ball_pos, ball_size);\n    float floor_dist = sdFloor(uv, floor_height);\n    float squish_dist = sdSquish(uv - squish_pos, squish_depth, 0.1);\n    \n    \n    // having some fun with the textures\n    vec3 col = vec3(0.01);\n    col += max(0.0,.1-fract(abs(uv.x*2.5)));\n    col += max(0.0,.1-fract(abs(uv.y*2.5))); //background lines\n    vec3 ball_col = vec3(0.1, 0.1+abs(cos(ball_dist*80.0)), 0.3);\n    vec3 floor_col = normalize(vec3(0.1+0.05*abs(sin(uv.x*2.0)+smoothstep(0.01, 0.4,(cos(uv.y*4.0)))), min(0.3,uv.y-1.5*floor_height), 0.05));\n    vec3 squish_col = vec3(0.05, 0.2, squish_depth);\n    \n    // color mixing with lazy alpha belnding\n    col = mix(col, floor_col, smoothstep(0.01, .0, floor_dist));\n    col = mix(col, ball_col, smoothstep(0.01, 0.0, ball_dist)*0.8);\n    col = mix(col, squish_col, smoothstep(0.01, .0, squish_dist)*0.9);\n\n    fragColor = vec4(col,1.0);\n}",
+      "name": "Image",
+      "description": "",
+      "type": "image"
+    }
+  ]
+}

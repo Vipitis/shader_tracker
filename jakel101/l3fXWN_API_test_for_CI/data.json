@@ -1,0 +1,58 @@
+{
+  "ver": "0.1",
+  "info": {
+    "id": "l3fXWN",
+    "date": "1709519899",
+    "viewed": 203,
+    "name": "API test for CI",
+    "username": "jakel101",
+    "description": "this is a shader used for testing API functionality in CI. Not yet finalized, so it might change a bit.",
+    "likes": 2,
+    "published": 3,
+    "flags": 0,
+    "usePreview": 0,
+    "tags": [
+      "test",
+      "apitesting"
+    ],
+    "hasliked": 0
+  },
+  "renderpass": [
+    {
+      "inputs": [
+        {
+          "id": 14,
+          "src": "/media/a/cbcbb5a6cfb55c36f8f021fbb0e3f69ac96339a39fa85cd96f2017a2192821b5.png",
+          "ctype": "texture",
+          "channel": 0,
+          "sampler": {
+            "filter": "nearest",
+            "wrap": "clamp",
+            "vflip": "true",
+            "srgb": "false",
+            "internal": "byte"
+          },
+          "published": 1
+        }
+      ],
+      "outputs": [
+        {
+          "id": 37,
+          "channel": 0
+        }
+      ],
+      "code": "//Confirm API working!\n\nfloat sdCheckmark(vec2 p, float s, float t)\n{\n    vec2 b = vec2(0.1*s, -.5*s);\n    float s1 = udSegment(p, vec2(-.4*s, -0.1*s), b);\n    float s2 = udSegment(p, b, vec2(.7*s, 0.5*s));\n    return min(s1, s2)-t;\n}\n\n\nvoid mainImage( out vec4 fragColor, in vec2 fragCoord )\n{\n    vec2 uv = (2.0*fragCoord - iResolution.xy)/iResolution.x;\n    vec2 m = (2.0*iMouse.xy - iResolution.xy)/iResolution.x;\n    \n    float sep = clamp(2.4*sin(iTime),-0.5, 0.5);\n    float scale = 0.6;\n    float thick = smoothstep(0.1, 1.1, (1.0 - length(uv-m))) * 0.06;\n    vec2 checkpos = uv - vec2(-sep,0.0);\n    vec2 crospos = uv - vec2(sep,0.0);\n    \n    float checkmark = sdCheckmark(checkpos, scale, thick);\n    float cros = sdCross(crospos, scale, thick);\n    \n    vec2 ncatuv = fragCoord/iChannelResolution[0].xy;\n    vec4 ncat = texture(iChannel0, ncatuv);\n    \n    vec3 col = vec3(0.0);\n    col.r += 1.0 - smoothstep(0.0, 0.02, cros);\n    col.g += 1.0 - smoothstep(0.0, 0.02, checkmark);\n    col += ncat.rgb * ncat.a;\n    \n    fragColor = vec4(col, 1.0);\n}",
+      "name": "Image",
+      "description": "",
+      "type": "image"
+    },
+    {
+      "inputs": [],
+      "outputs": [],
+      "code": "//Common pass loaded!\n\n// from iq: https://www.shadertoy.com/view/3dKSDc\nfloat sdCross( in vec2 p, in float w, in float r )\n{\n    p = abs(p);\n    return length(p-min(p.x+p.y,w)*0.5) - r;\n}\n\n// from iq: https://www.shadertoy.com/view/3tdSDj\nfloat udSegment( in vec2 p, in vec2 a, in vec2 b )\n{\n    vec2 ba = b-a;\n    vec2 pa = p-a;\n    float h =clamp( dot(pa,ba)/dot(ba,ba), 0.0, 1.0 );\n    return length(pa-h*ba);\n}",
+      "name": "Common",
+      "description": "",
+      "type": "common"
+    }
+  ]
+}

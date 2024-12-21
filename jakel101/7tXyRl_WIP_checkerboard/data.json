@@ -1,0 +1,35 @@
+{
+  "ver": "0.1",
+  "info": {
+    "id": "7tXyRl",
+    "date": "1648509925",
+    "viewed": 215,
+    "name": "WIP checkerboard",
+    "username": "jakel101",
+    "description": "trying to understand shaders a bit at a time",
+    "likes": 2,
+    "published": 3,
+    "flags": 0,
+    "usePreview": 0,
+    "tags": [
+      "2d",
+      "pattern"
+    ],
+    "hasliked": 0
+  },
+  "renderpass": [
+    {
+      "inputs": [],
+      "outputs": [
+        {
+          "id": 37,
+          "channel": 0
+        }
+      ],
+      "code": "#define PI 3.14\n\nvoid mainImage( out vec4 fragColor, in vec2 fragCoord )\n{\n    // Normalized pixel coordinates (from 0 to 1)\n    vec2 uv = fragCoord/iResolution.xy;\n\n    // Time varying pixel color\n    vec3 white = vec3(1.,1.,1.);\n    \n    vec3 col = .5 * white;\n    \n    float x = floor(sin(8.0 * PI * uv.x));\n    float y = floor(sin(8.0 * PI * uv.y));\n    \n    col += (x);\n    col -= y;\n    \n    // Output to screen\n    fragColor = vec4(col,1.0);\n}",
+      "name": "Image",
+      "description": "",
+      "type": "image"
+    }
+  ]
+}

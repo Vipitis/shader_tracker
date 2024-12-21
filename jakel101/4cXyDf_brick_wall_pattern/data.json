@@ -1,0 +1,35 @@
+{
+  "ver": "0.1",
+  "info": {
+    "id": "4cXyDf",
+    "date": "1721662949",
+    "viewed": 84,
+    "name": "brick wall pattern",
+    "username": "jakel101",
+    "description": "essentially just the lines themselves. not giving IDs for the bricks or anything which would be interesting to putting different bricks etc.",
+    "likes": 0,
+    "published": 3,
+    "flags": 0,
+    "usePreview": 0,
+    "tags": [
+      "pattern",
+      "tiling"
+    ],
+    "hasliked": 0
+  },
+  "renderpass": [
+    {
+      "inputs": [],
+      "outputs": [
+        {
+          "id": 37,
+          "channel": 0
+        }
+      ],
+      "code": "#define PI 3.14159265\n\n\n\nvoid mainImage( out vec4 fragColor, in vec2 fragCoord )\n{\n    // Normalized pixel coordinates (from 0 to 1)\n    vec2 uv = fragCoord/iResolution.xy;\n    \n    // scale or zoom\n    uv *= 8.5;\n    \n    vec3 bg_col = vec3(0.85,0.2,0.05); //orange brick color?\n    \n    float thickness = 0.05;\n    float vert_lines = smoothstep(0.0, thickness, sin((uv.x*2.0*PI+sign(sin(uv.y*PI))*PI/2.0))-1.0+thickness);\n    float horizontal_lines = smoothstep(0.0, thickness, cos(uv.y*2.0*PI)-1.0+thickness);\n    \n    vec3 fill_col = vec3(0.41, 0.56, 0.65); // grey color\n    \n    vec3 col = mix(bg_col, fill_col, max(vert_lines, horizontal_lines));\n    \n    // Output to screen\n    fragColor = vec4(col,1.0);\n}",
+      "name": "Image",
+      "description": "",
+      "type": "image"
+    }
+  ]
+}

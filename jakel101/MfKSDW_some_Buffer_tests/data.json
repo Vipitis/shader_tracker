@@ -1,0 +1,133 @@
+{
+  "ver": "0.1",
+  "info": {
+    "id": "MfKSDW",
+    "date": "1715214362",
+    "viewed": 77,
+    "name": "some Buffer tests",
+    "username": "jakel101",
+    "description": "experimenting with the Buffers to understand how multi pass shaders are implemented.",
+    "likes": 1,
+    "published": 3,
+    "flags": 32,
+    "usePreview": 0,
+    "tags": [
+      "tests"
+    ],
+    "hasliked": 0
+  },
+  "renderpass": [
+    {
+      "inputs": [
+        {
+          "id": 257,
+          "src": "/media/previz/buffer00.png",
+          "ctype": "buffer",
+          "channel": 0,
+          "sampler": {
+            "filter": "linear",
+            "wrap": "repeat",
+            "vflip": "true",
+            "srgb": "false",
+            "internal": "byte"
+          },
+          "published": 1
+        }
+      ],
+      "outputs": [
+        {
+          "id": 37,
+          "channel": 0
+        }
+      ],
+      "code": "void mainImage( out vec4 fragColor, in vec2 fragCoord )\n{\n    // Normalized pixel coordinates (from 0 to 1)\n    vec2 uv = fragCoord/iResolution.xy;\n\n    vec2 uv_f = uv * 2.;\n    vec4 col = texture(iChannel0, uv_f);\n\n    // Output to screen\n    fragColor = col;\n}",
+      "name": "Image",
+      "description": "",
+      "type": "image"
+    },
+    {
+      "inputs": [
+        {
+          "id": 8,
+          "src": "/media/a/52d2a8f514c4fd2d9866587f4d7b2a5bfa1a11a0e772077d7682deb8b3b517e5.jpg",
+          "ctype": "texture",
+          "channel": 1,
+          "sampler": {
+            "filter": "mipmap",
+            "wrap": "repeat",
+            "vflip": "true",
+            "srgb": "false",
+            "internal": "byte"
+          },
+          "published": 1
+        },
+        {
+          "id": 258,
+          "src": "/media/previz/buffer01.png",
+          "ctype": "buffer",
+          "channel": 0,
+          "sampler": {
+            "filter": "linear",
+            "wrap": "clamp",
+            "vflip": "true",
+            "srgb": "false",
+            "internal": "byte"
+          },
+          "published": 1
+        }
+      ],
+      "outputs": [
+        {
+          "id": 257,
+          "channel": 0
+        }
+      ],
+      "code": "void mainImage( out vec4 fragColor, in vec2 fragCoord )\n{\n    vec2 uv = fragCoord/iResolution.xy;\n    vec4 col0 = texture(iChannel0,uv);\n    vec4 col1 = texture(iChannel1,uv);\n    fragColor = mix(col0,col1,0.5) * vec4(uv.y,uv.x,1.0,1.0);\n}",
+      "name": "Buffer A",
+      "description": "",
+      "type": "buffer"
+    },
+    {
+      "inputs": [
+        {
+          "id": 9,
+          "src": "/media/a/bd6464771e47eed832c5eb2cd85cdc0bfc697786b903bfd30f890f9d4fc36657.jpg",
+          "ctype": "texture",
+          "channel": 0,
+          "sampler": {
+            "filter": "mipmap",
+            "wrap": "repeat",
+            "vflip": "true",
+            "srgb": "false",
+            "internal": "byte"
+          },
+          "published": 1
+        },
+        {
+          "id": 259,
+          "src": "/media/previz/buffer02.png",
+          "ctype": "buffer",
+          "channel": 1,
+          "sampler": {
+            "filter": "linear",
+            "wrap": "clamp",
+            "vflip": "true",
+            "srgb": "false",
+            "internal": "byte"
+          },
+          "published": 1
+        }
+      ],
+      "outputs": [
+        {
+          "id": 258,
+          "channel": 0
+        }
+      ],
+      "code": "void mainImage( out vec4 fragColor, in vec2 fragCoord )\n{\n    vec2 uv = fragCoord/iResolution.xy;\n    vec4 col0 = texture(iChannel0,uv);\n    vec4 col1 = texture(iChannel1,uv);\n    fragColor = mix(col0, col1, sin(iTime));\n}",
+      "name": "Buffer B",
+      "description": "",
+      "type": "buffer"
+    }
+  ]
+}

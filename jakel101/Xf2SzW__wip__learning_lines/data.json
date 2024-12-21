@@ -1,0 +1,34 @@
+{
+  "ver": "0.1",
+  "info": {
+    "id": "Xf2SzW",
+    "date": "1706104704",
+    "viewed": 142,
+    "name": "[wip] learning lines",
+    "username": "jakel101",
+    "description": "learning to draw some lines",
+    "likes": 2,
+    "published": 3,
+    "flags": 0,
+    "usePreview": 0,
+    "tags": [
+      "lines"
+    ],
+    "hasliked": 0
+  },
+  "renderpass": [
+    {
+      "inputs": [],
+      "outputs": [
+        {
+          "id": 37,
+          "channel": 0
+        }
+      ],
+      "code": "#define PHI 1.618033988749\n#define TAU 6.283185307179586476925286766559\n\nfloat hash1( float seed){\n    return fract(11.5*seed*fract(PHI * 0.123));\n}\n\n// Basic noise via iq\nfloat bnoise( in float x )\n{    \n    float i = floor(x);\n    float f = fract(x);\n    float s = sign(fract(x/2.0)-0.5);\n    float k = fract(i*PHI);\n\n    return s*f*(f-1.0)*((16.0*k-4.0)*f*(f-1.0)-1.0);\n}\n\n\nvoid mainImage( out vec4 fragColor, in vec2 fragCoord )\n{\n    vec2 uv = fragCoord/iResolution.xy * 2.0 -1.0;\n    \n    // hack cordinate space into polar?\n    float r = length(uv);\n    float a = atan(uv.y,uv.x);\n    vec2 pc = vec2(r,a/TAU*8.0 - 0.175);\n    uv = pc.yx - .4;\n    \n    float line;\n    line = bnoise(uv.x * 5.0 + iTime) * 0.4;\n    line *= 0.7; // scale vertical\n    \n    vec3 col = vec3(0.0);\n    col += vec3(uv.y - line);\n    col = abs(col); // does this count as an SDF?\n    col *= 10.0; // thin the lines?\n    col = 1.0 - clamp(col, 0.0, 1.0); //invert\n    col *= 3.5;\n    col = pow(col, vec3(1.4));\n    \n    // add some \"color\"\n    col *= vec3(0.5, 0.2, 1.0);    \n    fragColor = vec4(col,1.0);\n}",
+      "name": "Image",
+      "description": "",
+      "type": "image"
+    }
+  ]
+}

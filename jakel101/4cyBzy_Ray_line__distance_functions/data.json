@@ -1,0 +1,36 @@
+{
+  "ver": "0.1",
+  "info": {
+    "id": "4cyBzy",
+    "date": "1734198534",
+    "viewed": 64,
+    "name": "Ray(line) distance functions",
+    "username": "jakel101",
+    "description": "mostly figuring this out myself, but pen and paper and some references help.\n\nDirected ray has an origin and direction. I use a single float as the direction in radians (but a point or vector would also work), 0 is top.",
+    "likes": 1,
+    "published": 3,
+    "flags": 0,
+    "usePreview": 0,
+    "tags": [
+      "2d",
+      "math",
+      "distance"
+    ],
+    "hasliked": 0
+  },
+  "renderpass": [
+    {
+      "inputs": [],
+      "outputs": [
+        {
+          "id": 37,
+          "channel": 0
+        }
+      ],
+      "code": "# define PI 3.141592\nfloat udRay(vec2 pos, float ang){    \n    ang *= PI*2.0; // from radians to TAU%    \n    vec2 dir = vec2(sin(ang), cos(ang)); // vector along the ray\n    return length(pos - dir*max(dot(pos,dir), 0.0));    \n}\n\n//TODO: signed distance to easily know which side you are on?\nfloat sdRay(vec2 pos, float ang){\n    float dist = udRay(pos, ang);\n    // extract this logic?\n    ang *= PI*2.0;\n    vec2 ortho = vec2(cos(ang), -sin(ang));\n    return dist * sign(dot(pos, ortho));\n}\n\n//TODO: with normals, is this signed?\nvec3 gdRay(vec2 pos, float ang){\n    // extract again\n    float dist = sdRay(pos, ang);\n    ang *= PI*2.0;\n    vec2 ortho = vec2(cos(ang), -sin(ang));\n    float sgn = sign(dot(pos, ortho));\n    \n    vec2 norm = ortho*sgn; // just init, not sure yet\n    \n    // just pointing away from the origin behind the ray?\n    vec2 dir = vec2(sin(ang), cos(ang));\n    if (dot(pos, dir) < 0.0) norm = pos;    \n    return vec3(dist, normalize(norm));\n}\n\nvoid mainImage( out vec4 fragColor, in vec2 fragCoord )\n{\n    vec2 uv = (2.0*fragCoord-iResolution.xy)/iResolution.y;\n    vec2 mou = (2.0*iMouse.xy-iResolution.xy)/iResolution.y;\n\n    float line_size = fwidth(uv.y)*1.5;    \n    vec3 col = vec3(0.02);\n\n    // selection to show just one of them at a time changes every 2 seconds.\n    float sel = floor(mod(iTime*0.5, 3.0));\n\n    float u_ray = udRay(uv, iTime);\n    if (sel != 0.0) u_ray = 1.0; // hide this one easily.\n    vec3 u_col = vec3(0.7, 0.2, 0.4);\n    col = mix(col, u_col, clamp(clamp(-cos(u_ray*100.0), 0.0, 1.0) * (1.0 - (u_ray*2.0)), 0.0, 1.0));\n    col.r = mix(col.r, 1.0, smoothstep(line_size, 0.0, u_ray));\n\n    float s_ray = sdRay(uv, iTime);\n    if (sel != 1.0) s_ray = 1.0; // hide this one easily.\n    vec3 s_col = vec3(0.2, 0.8, float(s_ray < 0.0)*0.4 + 0.2);\n    col = mix(col, s_col, clamp(clamp(-cos(s_ray*100.0), 0.0, 1.0) * (1.0 - (abs(s_ray)*2.0)), 0.0, 1.0));\n    col.g = mix(col.g, 1.0, smoothstep(line_size, 0.0, abs(s_ray)));\n    \n    vec3 g_ray = gdRay(uv, iTime);\n    if (sel != 2.0) g_ray.x = 1.0; //TODO: how to hide this one?    \n    col.gb = mix(col.gb, g_ray.gb, float(sel == 2.0));\n    col.b = mix(col.b, 1.0, smoothstep(line_size, 0.0, abs(g_ray.x)));\n\n    // little crosshair\n    col += smoothstep(line_size, 0.0, abs(uv.x));\n    col += smoothstep(line_size, 0.0, abs(uv.y));\n    fragColor = vec4(col,1.0);\n}",
+      "name": "Image",
+      "description": "",
+      "type": "image"
+    }
+  ]
+}

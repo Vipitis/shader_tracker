@@ -1,0 +1,34 @@
+{
+  "ver": "0.1",
+  "info": {
+    "id": "M3jGzh",
+    "date": "1708209659",
+    "viewed": 122,
+    "name": "WGPUtest: nested loop [FIXED]",
+    "username": "jakel101",
+    "description": "wgpu seems to have trouble with nested loops. this shadertoy serves as a minimal example.\n\nIf moving the mouse (while clicked) doesn't change anything ... it is working!",
+    "likes": 0,
+    "published": 3,
+    "flags": 0,
+    "usePreview": 0,
+    "tags": [
+      "test"
+    ],
+    "hasliked": 0
+  },
+  "renderpass": [
+    {
+      "inputs": [],
+      "outputs": [
+        {
+          "id": 37,
+          "channel": 0
+        }
+      ],
+      "code": "float checkerboard(vec2 uv, float cells){\n    uv *= cells/2.0;\n    float rows = float(mod(uv.y, 1.0) <= 0.5);\n    float cols = float(mod(uv.x, 1.0) <= 0.5);\n    return float(rows == cols);\n}\n\nvec2 working(vec2 uv, float steps){\n    float red = 0.0;\n    float green = 0.0;\n    int x;\n    int y;\n    for (x = 1; x <= 3; x++){\n        // 1 + 2 + 3 = 6\n        green += float(x);\n        for (y = 1; y <= 3; y++){\n            // 1+1+1 + 2+2+2 + 3+3+3 = 18?\n            red += float(x);\n        }\n    }\n    red = red / steps;\n    green = green / steps;\n    \n    return vec2(red<uv.x, green<uv.y);\n}\n\nvec2 broken(vec2 uv, float steps){\n    float red = 0.0;\n    float green = 0.0;\n    for (int x = 1; x <= 3; x++){\n        // 1 + 2 + 3 = 6\n        green += float(x);\n        for (int y = 1; y <= 3; y++){\n            // 1+1+1 + 2+2+2 + 3+3+3 = 18?\n            red += float(x);\n        }\n    }\n    red = red / steps;\n    green = green / steps;\n    \n    return vec2(red<uv.x, green<uv.y);\n}\n\n\nvoid mainImage( out vec4 fragColor, in vec2 fragCoord )\n{\n    float steps = 25.0;\n    vec2 uv = fragCoord/iResolution.xy;\n    vec3 col = vec3(checkerboard(uv,steps)) * 0.7;\n\n    vec2 nested_result = mix(working(uv, steps), broken(uv, steps), iMouse.x/iResolution.x);\n    col.rg += nested_result.rg;\n    \n    fragColor = vec4(col,1.0);\n}",
+      "name": "Image",
+      "description": "",
+      "type": "image"
+    }
+  ]
+}

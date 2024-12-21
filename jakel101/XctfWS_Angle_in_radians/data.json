@@ -1,0 +1,34 @@
+{
+  "ver": "0.1",
+  "info": {
+    "id": "XctfWS",
+    "date": "1733434292",
+    "viewed": 49,
+    "name": "Angle in radians",
+    "username": "jakel101",
+    "description": "took me a while to figure out that atan exist with two parameters too. the rescaling with mod is a bit odd, taken from here: https://www.shadertoy.com/view/4s3BR8",
+    "likes": 1,
+    "published": 3,
+    "flags": 0,
+    "usePreview": 0,
+    "tags": [
+      "trigonometry"
+    ],
+    "hasliked": 0
+  },
+  "renderpass": [
+    {
+      "inputs": [],
+      "outputs": [
+        {
+          "id": 37,
+          "channel": 0
+        }
+      ],
+      "code": "# define PI 3.141592\nvoid mainImage( out vec4 fragColor, in vec2 fragCoord )\n{\n    // uv from -1..1\n    vec2 uv = (2.0*fragCoord - iResolution.xy)/iResolution.y;\n    vec3 col;\n    \n    // crosshair\n    col.r = smoothstep(fwidth(uv.y), 0.0, min(abs(uv.x),abs(uv.y)));\n    \n    // angle value in radians 0..1\n    float val = mod(atan(uv.x, uv.y), PI*2.0);\n    col.g += val/(PI*2.0);\n    \n    // visualizing section\n    float sec = fract(iTime);\n    col.b = smoothstep(sec, sec-fwidth(uv.y), col.g);\n    \n    fragColor = vec4(col,1.0);\n}",
+      "name": "Image",
+      "description": "",
+      "type": "image"
+    }
+  ]
+}

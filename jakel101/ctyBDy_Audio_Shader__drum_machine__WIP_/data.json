@@ -1,0 +1,43 @@
+{
+  "ver": "0.1",
+  "info": {
+    "id": "ctyBDy",
+    "date": "1702415786",
+    "viewed": 211,
+    "name": "Audio Shader: drum machine [WIP]",
+    "username": "jakel101",
+    "description": "I am learning to write audio shaders, inspiration from: https://youtu.be/3mteFftC7fE and https://youtu.be/zbBY7JL9nnQ",
+    "likes": 1,
+    "published": 3,
+    "flags": 8,
+    "usePreview": 0,
+    "tags": [
+      "audio",
+      "learning"
+    ],
+    "hasliked": 0
+  },
+  "renderpass": [
+    {
+      "inputs": [],
+      "outputs": [
+        {
+          "id": 37,
+          "channel": 0
+        }
+      ],
+      "code": "void mainImage( out vec4 fragColor, in vec2 fragCoord )\n{\n    vec2 uv = fragCoord/iResolution.xy * 2.0 -1.0;\n\n    \n    vec2 field = 3.0* vec2(uv.x*fract(-iTime*.5), uv.y -abs(sin(iTime*4.0))+1.0);\n    // fold it?\n    field *= 3.5* mod(abs(field), .5);\n    field.x /= 2.0*uv.x;\n    \n    vec3 col = vec3(0.0);\n    col.r += abs(field.y*field.x)*abs(sin(iTime/.2)+0.5);\n    col.g += abs(field.y*field.x)*abs(sin(iTime/.25)+0.3);\n    col.b += abs(field.y*field.x)*sin(iTime+1.25/.5)-0.1;\n    \n\n    // Output to screen\n    fragColor = vec4(col,1.0);\n}",
+      "name": "Image",
+      "description": "",
+      "type": "image"
+    },
+    {
+      "inputs": [],
+      "outputs": [],
+      "code": "#define TAU 6.2831\n\n// helpers\nfloat hash21(float a, float b){\n    return fract((a*5.421)*(b+2.876)*b);\n}\n\nfloat noise1(float s, float t){\n    return mix(hash21(s, s*s), hash21(2.0*s, -1.0), abs(sin(t)));\n}\n\n//instruments\nfloat bell(float f, float a, float t){\n    return a*sin(TAU*f*t)*exp(-5.0*t);\n}\n\nfloat snare(float f, float a, float t, float d){\n    return a*sin(exp(-TAU*t*f))*exp(-d*t)*noise1(f,t);\n}\n\nfloat triangle(float f, float a, float t){\n    return (a*abs(4.0*f*mod(t,1.0/f)-2.0)-1.0)*exp(-7.0*t);\n}\n\n\n\nvec2 mainSound( int samp, float time )\n{\n    \n    // add on to this for a lazy mix\n    vec2 sig = vec2(0.0);\n    \n    sig += vec2(bell(660.0, 0.5, mod(time + 1.25, 2.0)));    \n    sig += vec2(bell(440.0, 0.3, mod(time + 1.00, 2.0)));\n    \n    \n    sig += vec2(triangle(22.0, .6, mod(time, 0.5)));\n    \n    sig += vec2(triangle(33.0, .8, mod(time, 2.0)));\n    \n    sig += vec2(snare(4.0, 0.3, mod(time + 1.75, 2.0), 1.0));\n    \n    \n    return sig;\n}",
+      "name": "Sound",
+      "description": "",
+      "type": "sound"
+    }
+  ]
+}

@@ -1,0 +1,49 @@
+{
+  "ver": "0.1",
+  "info": {
+    "id": "lXf3Ws",
+    "date": "1708037702",
+    "viewed": 147,
+    "name": "sampler as function paramter",
+    "username": "jakel101",
+    "description": "GLSL allows you to use a sampler as function parameter. This seems to currently lead to and issue with wgpu.",
+    "likes": 0,
+    "published": 3,
+    "flags": 0,
+    "usePreview": 0,
+    "tags": [
+      "test"
+    ],
+    "hasliked": 0
+  },
+  "renderpass": [
+    {
+      "inputs": [
+        {
+          "id": 14,
+          "src": "/media/a/cbcbb5a6cfb55c36f8f021fbb0e3f69ac96339a39fa85cd96f2017a2192821b5.png",
+          "ctype": "texture",
+          "channel": 0,
+          "sampler": {
+            "filter": "nearest",
+            "wrap": "repeat",
+            "vflip": "true",
+            "srgb": "false",
+            "internal": "byte"
+          },
+          "published": 1
+        }
+      ],
+      "outputs": [
+        {
+          "id": 37,
+          "channel": 0
+        }
+      ],
+      "code": "void Function(in sampler2D myTexture);\nvoid Function2(sampler2D myTexture);\n\nvec4 invertedSampler(in sampler2D s, in vec2 uv) {\n    uv *= vec2(1.0, -1.0);\n    return texture(s, uv);\n}\n\nvoid mainImage( out vec4 fragColor, in vec2 fragCoord )\n{\n    vec2 uv = fragCoord/iResolution.xy;\n    vec4 c0 = invertedSampler(iChannel0,uv);\n    fragColor = c0;\n}",
+      "name": "Image",
+      "description": "",
+      "type": "image"
+    }
+  ]
+}

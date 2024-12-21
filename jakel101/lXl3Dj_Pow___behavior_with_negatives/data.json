@@ -1,0 +1,34 @@
+{
+  "ver": "0.1",
+  "info": {
+    "id": "lXl3Dj",
+    "date": "1707948239",
+    "viewed": 124,
+    "name": "Pow() behavior with negatives",
+    "username": "jakel101",
+    "description": "Test shader to see how the pow() function behaves with negative numbers. According the the help (bottom right corner): \n> pow/sqrt: please don't feed sqrt() and pow() with negative numbers. Add an abs() or max(0.0,) to the argument",
+    "likes": 1,
+    "published": 3,
+    "flags": 0,
+    "usePreview": 0,
+    "tags": [
+      "test"
+    ],
+    "hasliked": 0
+  },
+  "renderpass": [
+    {
+      "inputs": [],
+      "outputs": [
+        {
+          "id": 37,
+          "channel": 0
+        }
+      ],
+      "code": "void mainImage( out vec4 fragColor, in vec2 fragCoord )\n{\n    vec2 uv = (2.0*fragCoord - iResolution.xy)/iResolution.y;\n\n\n    float y = 4.0 * uv.y;\n    vec3 col = vec3(0.0);\n    col.r += pow(uv.x, y);\n    col.g += pow(abs(uv.x), y);\n    col.b += pow(max(0.0, uv.x), y);\n    \n    fragColor = vec4(col,1.0);\n}",
+      "name": "Image",
+      "description": "",
+      "type": "image"
+    }
+  ]
+}

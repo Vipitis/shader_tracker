@@ -1,0 +1,34 @@
+{
+  "ver": "0.1",
+  "info": {
+    "id": "XfSGRt",
+    "date": "1704493098",
+    "viewed": 150,
+    "name": "First march: a flag pole",
+    "username": "jakel101",
+    "description": "inspired by: https://youtu.be/khblXafu7iA. Happy for now. more work to do to make it interesting...",
+    "likes": 1,
+    "published": 3,
+    "flags": 0,
+    "usePreview": 0,
+    "tags": [
+      "raymarching"
+    ],
+    "hasliked": 0
+  },
+  "renderpass": [
+    {
+      "inputs": [],
+      "outputs": [
+        {
+          "id": 37,
+          "channel": 0
+        }
+      ],
+      "code": "// Apache 2.0 licnese for this shader :)\n\nmat2 rot2D( float angle){\n    float s = sin(angle);\n    float c = cos(angle);\n    return mat2(c, -s, s, c);\n}\n\n// vertical cylinder from @iq MIT license: https://www.shadertoy.com/view/wdXGDr\nfloat sdCylinder( vec3 p, float h, float r )\n{\n  vec2 d = abs(vec2(length(p.xz),p.y)) - vec2(r,h);\n  return min(max(d.x,d.y),0.0) + length(max(d,0.0));\n}\n\n// from @iq: https://iquilezles.org/articles/distfunctions/\nfloat sdBox( vec3 p, vec3 b )\n{\n  vec3 q = abs(p) - b;\n  return length(max(q,0.0)) + min(max(q.x,max(q.y,q.z)),0.0);\n}\n\n// distance to the nearest object\nfloat map( vec3 p ) {\n    // ground is a plane just now\n    float groundHeight = 1.0;    // ground at y = -1.0\n    float ground = p.y + groundHeight; \n    \n    // the \"pole\" is a Cylinder for now\n    float poleHeight = 2.1;   \n    vec3 polePos = vec3(0., -groundHeight + 0.5 * poleHeight, 0.);\n    float poleRadius = 0.05;\n    float pole = sdCylinder(p- polePos, poleHeight, poleRadius);\n    \n    // the \"flag\" is just a thin box right now\n    vec3 flagShape = vec3(.8, 0.45, 0.025);\n    vec3 flagPos = p - vec3(polePos.x, // flag starts in the center\n                        polePos.y + poleHeight - flagShape.y, // flag height is linked to pol height and flag shape\n                        polePos.z);\n    // Flag moving down occasionally, always to half?\n    flagPos.y += smoothstep(0.2, 0.8, sin(iTime* 0.73)) * poleHeight* 0.5;\n                        \n    float windDir = sin(iTime * 0.4); // * p.x; \n    // multiply by flagPos.x or something to make the sway stronger further out??? -tbd\n    flagPos.xz *= rot2D(windDir); // first rotate\n    flagPos.x -= flagShape.x;               // then offset to the side\n    float flag = sdBox(flagPos, flagShape);\n    \n    \n    return min(ground,min(pole,flag));\n}\n\nvoid mainImage( out vec4 fragColor, in vec2 fragCoord )\n{\n    vec2 uv = (fragCoord * 2.0 - iResolution.xy)/iResolution.y;\n    vec2 m = (iMouse.xy * 2.0 - iResolution.xy)/iResolution.y;\n    \n    // Initialize\n    vec3 ro = vec3(0.0, 0.0, -4.0);         // rayOrigin\n    vec3 rd = normalize(vec3(uv, 1));     // rayDirection\n    vec3 col = vec3(0);                   // pixel color\n\n    float t = 0.0;                          //total distance travelled\n    \n    // mouse control\n    ro.yz *= rot2D(-m.y);\n    rd.yz *= rot2D(-m.y);\n    \n    ro.xz *= rot2D(-m.x);\n    rd.xz *= rot2D(-m.x);\n\n    // Raymarching loop\n    int i;\n    vec3 p = vec3(0.0);\n    for (i=0; i<=80; i++){\n        p = ro + rd*t;                 // position along the ray\n        float d = map(p);                   // current distance to next object in the scene\n        \n        t += d;                             // marching step\n        \n        if (d < 0.0005) break;               // early stop near\n        if (d > 50.0) break;        // early stop far\n    }\n    \n    // coloring, make sure to scale down to less than 1.0!!\n    col.g = t * 0.05;\n\n    col.r = float(i) * 0.05;\n    col.b = p.z * 0.23;\n    \n\n    fragColor = vec4(col,1.0);\n}",
+      "name": "Image",
+      "description": "",
+      "type": "image"
+    }
+  ]
+}

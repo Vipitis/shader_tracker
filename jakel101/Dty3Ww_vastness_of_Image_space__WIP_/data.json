@@ -1,0 +1,35 @@
+{
+  "ver": "0.1",
+  "info": {
+    "id": "Dty3Ww",
+    "date": "1684075553",
+    "viewed": 176,
+    "name": "vastness of Image space (WIP)",
+    "username": "jakel101",
+    "description": "with help of Copilot chat\nIt is meant to show the concept of how vast image space is. Based on a fact noted by Steve Brunton in this video https://www.youtube.com/watch?v=Dt2WYkqZfbs a 20x20 image with just black or white pixels has more information than ",
+    "likes": 2,
+    "published": 3,
+    "flags": 0,
+    "usePreview": 0,
+    "tags": [
+      "random",
+      "educational"
+    ],
+    "hasliked": 0
+  },
+  "renderpass": [
+    {
+      "inputs": [],
+      "outputs": [
+        {
+          "id": 37,
+          "channel": 0
+        }
+      ],
+      "code": "float modSecs(float modulo)\n{\n    return mod(floor(iTime), modulo);\n}\n\n// an array of 13 int32 numbers can hold the 400bit number for us?\nint[13] number;\n\nbool get_bit(int idx)\n{   \n    // register of which idx of the array we are in\n    int reg = idx >> 5;\n    // remainder of which index in the specific int32 we are in\n    int rem = idx & 0x1F;\n    \n    return ((number[reg] >> int(rem)) & 1) == 0;\n}\n\nbool get_bit_from_float(float inp, int idx)\n{   \n    return ((int(inp) >> idx) & 1) == 1;\n}\n\nvoid set_bit(bool val, int idx)\n{\n    // register of which idx of the array we are in\n    int reg = idx >> 5;\n    // remainder of which index in the specific int32 we are in\n    int rem = idx & 0x1F;\n\n    number[reg] |= (int(val) << rem);\n}\n\n\nvoid mainImage(out vec4 fragColor, in vec2 fragCoord)\n{\n    // Define the resolution of the screen\n    vec2 uv = fragCoord/iResolution.xy;\n\n    vec2 fields = floor(uv * 20.0);\n    \n    float field_idx = fields.x + (fields.y * 20.0);\n\n    // fill number with something \"random\"\n    for (int i = 0; i < 13; i++)\n    {\n        // number[i] = 0xFA0AFA0A; // some funny pattern\n        number[i] = int(fract(sin(floor(iTime)))*165191048.7*float(i+1)); // some \"random\" number constructor for now\n    }\n\n    // set_bit(true, (int(iTime)*2)); // not persistent?\n\n    // Determine the color of the pixel based on its position\n    // color.r (red) is one field at a time, walks around the whole screen in 400 seconds\n    // color.g (green) does nothing right now (working on LSFR to run through all 400 bit of possible numbers randomly)\n    // color.b (blue) is a binary counter of iDate.w (the seconds), counts up to 3600, but runs over at 32 bit.\n    vec3 color = vec3(mod(field_idx - modSecs(400.0),400.0), get_bit(int(field_idx)), get_bit_from_float(iDate.w, int(field_idx)));\n\n    // just look at red channel\n    // color = vec3(color.r);\n    \n    // just look at green channel\n    color = vec3(color.g);\n\n    // just look at blue channel\n    // color = vec3(color.b);\n\n    // Set the color of the pixel\n    fragColor = vec4(color, 1.0);\n}",
+      "name": "Image",
+      "description": "",
+      "type": "image"
+    }
+  ]
+}

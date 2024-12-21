@@ -1,0 +1,36 @@
+{
+  "ver": "0.1",
+  "info": {
+    "id": "MflcRj",
+    "date": "1721334367",
+    "viewed": 124,
+    "name": "Brushed aluminium texture",
+    "username": "jakel101",
+    "description": "my attempt and doing a noise based brushed aluminium texture. The basic idea being you simply start with noise and then use directional blur.\nwould likely do better with added fractal noise to look sharper?\nlength and scale are fun to play with... (mouse)",
+    "likes": 1,
+    "published": 3,
+    "flags": 0,
+    "usePreview": 0,
+    "tags": [
+      "procedural",
+      "noise",
+      "texture"
+    ],
+    "hasliked": 0
+  },
+  "renderpass": [
+    {
+      "inputs": [],
+      "outputs": [
+        {
+          "id": 37,
+          "channel": 0
+        }
+      ],
+      "code": "#define PHI 1.6180339887\n\n// pseudo random? not great one....\nfloat hash21(in vec2 ab){\n    float a = ab.x - 0.006;\n    float b = ab.y + 0.1;\n    float h = mod(PHI, -45.4/a) * mod(PHI, -b*0.03);\n    h *= 9123.512;\n    return fract(dot(vec2(a,b),fract(vec2(h,a+b))*586.512));\n}\n\n\n// value noise ~ sorta\nfloat noise2(in vec2 ab){\n    \n    vec2 i = floor(ab);\n    vec2 f = fract(ab);\n    \n    vec2 f2 = smoothstep(0.0, 1.0, f); //\n    \n    // corners in 2D\n    // c3 - c2\n    //  |    |\n    // c0 - c1\n    float c0 = hash21(i);\n    float c1 = hash21(i+vec2(1.0,0.0));\n    float c2 = hash21(i+vec2(1.0,1.0));\n    float c3 = hash21(i+vec2(0.0,1.0));\n    \n    // reconstruct with interpolation\n    float r = mix( mix(c0, c1, f2.x),\n                   mix(c3, c2, f2.x), f2.y);\n    return r;\n}\n\nvoid mainImage( out vec4 fragColor, in vec2 fragCoord )\n{\n    // Normalized pixel coordinates (from 0 to 1)\n    vec2 uv = fragCoord/iResolution.xy;\n\n    // really naive directional blur\n    vec2 m = iMouse.xy;\n    if ((iMouse.x<=0.0)||(iMouse.y<=0.0)){m.x=400.0,m.y=420.0;};\n    float dist = m.y/10.0;\n    float scale = m.x;\n    \n    float steps = max(10.0,dist*3.0);\n    vec3 col = vec3(0);\n    for (float i = 0.0; i <= steps; i++){\n        vec2 offset = vec2((i/steps)*dist); \n        offset *= vec2(sin(iTime*0.1), cos(iTime*0.1)); // animate direction by time?\n        col += noise2((uv*scale)-offset+10.4)/steps;\n    }\n    \n    // Output to screen\n    fragColor = vec4(vec3(col),1.0);\n}",
+      "name": "Image",
+      "description": "",
+      "type": "image"
+    }
+  ]
+}

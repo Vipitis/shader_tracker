@@ -1,0 +1,42 @@
+{
+  "ver": "0.1",
+  "info": {
+    "id": "XcSXWD",
+    "date": "1706307624",
+    "viewed": 125,
+    "name": "Common renderpass example",
+    "username": "jakel101",
+    "description": "Figuring out how Common actually works to implement it in wgpu-shadertoy.\nInfo/reference: https://shadertoyunofficial.wordpress.com/2016/07/20/special-shadertoy-features/",
+    "likes": 0,
+    "published": 3,
+    "flags": 0,
+    "usePreview": 0,
+    "tags": [
+      "test"
+    ],
+    "hasliked": 0
+  },
+  "renderpass": [
+    {
+      "inputs": [],
+      "outputs": [
+        {
+          "id": 37,
+          "channel": 0
+        }
+      ],
+      "code": "void mainImage( out vec4 fragColor, in vec2 fragCoord )\n{\n    vec2 uv = (fragCoord - .5/iResolution.xy)/iResolution.y;\n\n    vec3 col = getRed(fract(iTime));\n    col += green;\n    // Output to screen\n    fragColor = vec4(col,1.0);\n}",
+      "name": "Image",
+      "description": "",
+      "type": "image"
+    },
+    {
+      "inputs": [],
+      "outputs": [],
+      "code": "// degree of red from 0.0 to 1.0 as a function\nvec3 getRed(float r){\n    return vec3(r, 0.0, 0.0);\n}\n\n// solid green as a variable\nvec3 green = vec3(0.0, 1.0, 0.0);",
+      "name": "Common",
+      "description": "",
+      "type": "common"
+    }
+  ]
+}

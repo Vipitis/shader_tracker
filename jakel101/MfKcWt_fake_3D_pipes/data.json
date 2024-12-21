@@ -1,0 +1,37 @@
+{
+  "ver": "0.1",
+  "info": {
+    "id": "MfKcWt",
+    "date": "1732834986",
+    "viewed": 78,
+    "name": "fake 3D pipes",
+    "username": "jakel101",
+    "description": "trying to figure this out on my own... Motivated by this video https://youtu.be/OV_ZN-8uy4w (segment at 4:45)\n(change SCALE to other values?)\nmouse moves the \"light source\", time animates it's height.",
+    "likes": 0,
+    "published": 3,
+    "flags": 0,
+    "usePreview": 0,
+    "tags": [
+      "2d",
+      "texture",
+      "light",
+      "pattern"
+    ],
+    "hasliked": 0
+  },
+  "renderpass": [
+    {
+      "inputs": [],
+      "outputs": [
+        {
+          "id": 37,
+          "channel": 0
+        }
+      ],
+      "code": "#define PI 3.141592\n#define SCALE 4.0\n\n// gradient distance (distance + norm) for a Ray.\n// .x is signed distance\n// .yz is normals\n// ang in radians\nvec3 gdRay(vec2 pos, float ang){\n    ang *= PI*2.0;\n    vec2 dir = vec2(sin(ang), cos(ang));\n    vec2 norm = pos - dir * max(dot(pos, dir), 0.);\n    float dist = length(norm);\n    return vec3(dist * sign(dot(pos, vec2(dir.y, -dir.x))), norm / dist);\n}\n\n\n// pipe tile\n// pos is the local area of this tile from 0..1\n// start is a angle of where the pipe begins 0..1\n// stop is also an angle of where the pipe stops.\n// also outputs an alpha channel either 0 or 1\nvec4 pipe_tile(vec2 pos, float start, float stop, vec3 light_angle){\n    // reshape each tile to be -1..1 again centered\n    vec2 uv = 2.0*pos - vec2(1.0);\n    uv *= 2.0;\n    \n    vec3 g_start = gdRay(uv, start);\n    vec3 g_stop = gdRay(uv, stop);\n    float dist = min(abs(g_start.x), abs(g_stop.x));\n    if (dist > 1.0) return vec4(0.0);\n    // min based on distance, maybe a smoother idea?\n    vec2 normals = (abs(g_start).x < abs(g_stop).x)?g_start.yz:g_stop.yz;\n    // normals = mix(g_start.yz,g_stop.yz,0.5+max(abs(g_start).x,1.0)-max(abs(g_stop).x,1.0));\n    \n    // hemisphere via just distance.\n    float height = sqrt(1.0-dist*dist);    \n    // normals need to be denormalized by distance and the normalized together with height\n    vec3 norm = normalize(vec3(normals*dist, height));\n    \n    \n    float light_intensity = max(0.0,dot(normalize(light_angle), norm));\n    vec3 col = vec3(0.1, 0.2, 0.8); // blue pipe\n    col = mix(col, vec3(0.8, 0.2, 0.4), float(abs(g_start.x)==abs(g_stop.x))); // red part buggy overlap\n    col = mix(col, vec3(0.1, 0.9, 0.3), float(abs(g_start.x)<abs(g_stop.x))); // green part\n    col *= light_intensity;\n    \n    vec3 ambient = vec3(0.05);\n    return vec4(vec3(col + col*ambient), 1.0); // todo alpha based on the expression above?\n}\n\n// simple version to use as a reference?\nvec4 ball_tile(vec2 pos, vec3 light_angle){\n    //shift tile space to be -1..0 again\n    vec2 uv = 2.0*pos - vec2(1.0);\n    uv *= 2.0;\n    float ball_dist = length(uv) -1.0;\n    \n    vec3 height = vec3(sqrt(1.0-pow(uv.x,2.0) - pow(uv.y, 2.0)));\n    vec3 norm = vec3(uv.x, uv.y, height);\n    \n    float light_intensity = max(0.0,dot(normalize(light_angle), norm));\n    vec3 col = vec3(0.15, 0.25, 0.9);\n    vec3 ambient = vec3(0.05);\n    \n    return vec4(vec3(col*light_intensity + col*ambient), 1.0)*step(0.0, -ball_dist);\n}\n\n\nvoid mainImage( out vec4 fragColor, in vec2 fragCoord )\n{\n    // the uv is centered\n    vec2 uv = (2.0 * fragCoord - iResolution.xy)/min(iResolution.x, iResolution.y);\n    vec2 mou = (2.0 * iMouse.xy - iResolution.xy)/min(iResolution.x, iResolution.y);\n    uv *= (SCALE/2.0);\n    mou *= (SCALE/2.0);\n    int tileID = int(floor(uv.x + SCALE/2.0) + floor(uv.y + SCALE/2.0) * SCALE);\n    \n    // per tile\n    vec3 light_angle = vec3(mou-floor(uv)-vec2(0.5), (sin(iTime)+1.0));\n    \n    vec3 col = vec3(0.05);\n    vec4 pipes = vec4(0.0);\n    vec2 tile_angle = vec2(floor(float(tileID)/SCALE)*float(1.0/(SCALE*2.0)),fract(float(tileID)/SCALE)*0.5+0.5);\n    //tile_angle.x += 0.2*iTime;\n    pipes += pipe_tile(fract(uv), tile_angle.x, tile_angle.y, light_angle);\n        \n    col = mix(col, pipes.rgb, pipes.a);\n    if (abs(uv.x) >= SCALE/2.0) col = ball_tile(fract(uv), light_angle).rgb; //col = vec3(0.0);\n    \n    \n    fragColor = vec4(vec3(col),1.0);\n}",
+      "name": "Image",
+      "description": "",
+      "type": "image"
+    }
+  ]
+}

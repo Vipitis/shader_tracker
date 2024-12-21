@@ -41,17 +41,3 @@ if __name__ == "__main__":
     }
     with open(f"{USER_NAME}_shaders.json", "w") as f:
         json.dump(construct, f, indent=2)
-
-    # make one folder per shader?
-    os.makedirs(USER_NAME, exist_ok=True)
-    for shader in all_data:
-        shader_path = os.path.join(USER_NAME, shader["Shader"]["info"]["id"])
-        with open(shader_path, "w") as f:
-            json.dump(shader, f, indent=2)
-        for renderpass in shader["Shader"]["renderpass"]:
-            code, name = renderpass["code"], renderpass["name"]
-            with open(os.path.join(shader_path, f"{name.replace(" ", "_")}.frag"), "w") as f:
-                f.write(code)
-    
-    # TODO: add gallyer.md with a nice table (including images?)
-    

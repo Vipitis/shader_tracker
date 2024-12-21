@@ -1,0 +1,34 @@
+{
+  "ver": "0.1",
+  "info": {
+    "id": "X3XGRN",
+    "date": "1707179459",
+    "viewed": 118,
+    "name": "Unsized array syntax",
+    "username": "jakel101",
+    "description": "Testing out what goes on shadertoy...\nOpenGL Spec https://registry.khronos.org/OpenGL/specs/gl/GLSLangSpec.4.60.pdf Chapter 4.1.9\ntracking: https://github.com/gfx-rs/wgpu/issues/5206",
+    "likes": 0,
+    "published": 3,
+    "flags": 0,
+    "usePreview": 0,
+    "tags": [
+      "test"
+    ],
+    "hasliked": 0
+  },
+  "renderpass": [
+    {
+      "inputs": [],
+      "outputs": [
+        {
+          "id": 37,
+          "channel": 0
+        }
+      ],
+      "code": "\n// constant\nconst float[] a = float[](0.0, 1.0, 2.0, 3.0);\nconst float[] b = float[4](0.1, 1.1, 2.1, 3.1);\nconst float[4] c = float[](0.2, 1.2, 2.2, 3.2);\nconst float[4] d = float[4](0.3, 1.3, 2.3, 3.3);\n\n// not declared constant\nfloat[] e = float[](0.4, 1.4, 2.4, 3.4);\nfloat[] f = float[4](0.5, 1.5, 2.5, 3.5);\nfloat[4] g = float[](0.6, 1.6, 2.6, 3.6);\nfloat[4] h = float[4](0.7, 1.7, 2.7, 3.7);\n\n\nfloat avg4( float arr[4]){\n    float sum;\n    sum = arr[0];\n    sum += arr[1];\n    sum += arr[2];\n    sum += arr[3];\n    return sum /float(arr.length());\n}\n\nvoid mainImage( out vec4 fragColor, in vec2 fragCoord )\n{\n    vec2 uv = (2.0*fragCoord - iResolution.xy)/iResolution.y;\n\n    // vec3 col = vec3(0.25 * avg4(a));\n    // vec3 col = vec3(0.25 * avg4(b));\n    // vec3 col = vec3(0.25 * avg4(c));\n    vec3 col = vec3(0.25 * avg4(d));\n    // vec3 col = vec3(0.25 * avg4(e));\n    // vec3 col = vec3(0.25 * avg4(f));\n    // vec3 col = vec3(0.25 * avg4(g));\n    // vec3 col = vec3(0.25 * avg4(h));\n    // vec3 col = vec3(0.123);\n    \n    fragColor = vec4(col,1.0);\n}",
+      "name": "Image",
+      "description": "",
+      "type": "image"
+    }
+  ]
+}

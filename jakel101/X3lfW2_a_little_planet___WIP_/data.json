@@ -1,0 +1,36 @@
+{
+  "ver": "0.1",
+  "info": {
+    "id": "X3lfW2",
+    "date": "1728936073",
+    "viewed": 58,
+    "name": "a little planet? (WIP)",
+    "username": "jakel101",
+    "description": "inspired by the render at 11:40 in this video: https://www.youtube.com/watch?v=o879xRxmwmU\nTrying to figure out how to map noise to a sphere and use that in raymarching some shells... but ended up just having noise in the whole volume ....",
+    "likes": 0,
+    "published": 3,
+    "flags": 0,
+    "usePreview": 0,
+    "tags": [
+      "raymarching",
+      "noise",
+      "spheres"
+    ],
+    "hasliked": 0
+  },
+  "renderpass": [
+    {
+      "inputs": [],
+      "outputs": [
+        {
+          "id": 37,
+          "channel": 0
+        }
+      ],
+      "code": "// Apache 2.0 license\n// sorta work in progress\n\n\n// constants/defines?\nconst int MAX_STEPS = 128;\n\n// might be horribly unstable and not fit for this scale.\nfloat hash31(in vec3 a){\n    //return texture(iChannel0, 0.9*a).r; // shortcut by sampling noise instead..\n    vec3 b = a *vec3(54.1122, 123.532, 05.001);\n    b = fract(b + 1.376)-91.12;\n    return fract(dot(a-b,b)+0.43);\n}\n\n// 3d gradient noise??\nfloat noise(in vec3 p){\n    vec3 i = floor(p);\n    vec3 f = fract(p);\n    \n    // 8 corners of a cube\n    float vLLL = hash31(i + vec3(0.0,0.0,0.0));\n    float vLLH = hash31(i + vec3(0.0,0.0,1.0));\n    float vLHL = hash31(i + vec3(0.0,1.0,0.0));\n    float vLHH = hash31(i + vec3(0.0,1.0,1.0));\n    \n    float vHLL = hash31(i + vec3(1.0,0.0,0.0));\n    float vHLH = hash31(i + vec3(1.0,0.0,1.0));\n    float vHHL = hash31(i + vec3(1.0,1.0,0.0));\n    float vHHH = hash31(i + vec3(1.0,1.0,1.0));\n    \n    // interpolated values in the different axis\n    float nLLz = mix(vLLL, vLLH, f.z);\n    float nLHz = mix(vLHL, vLHH, f.z);\n    float nHHz = mix(vHHL, vHHH, f.z);\n    float nHLz = mix(vHLL, vHLH, f.z);\n    \n    float nLyz = mix(nLLz, nLHz, f.y);\n    float nHyz = mix(nHLz, nHHz, f.y);\n    \n    float nxyz = mix(nLyz, nHyz, f.x);\n    \n    return nxyz;\n\n}\n\n// rotate around the one axis left untouched.\nmat2 rot2D( float angle){\n    float s = sin(angle);\n    float c = cos(angle);\n    return mat2(c, -s, s, c);\n}\n\n// is this a simple sphere? all we need?\nfloat sdSphere(vec3 pos, float radius){\n    return length(pos) - radius;\n}\n\n// can we analytically return normals as this is just spheres?\n// TODO: normals for shadows and phong\n\n\n// map might be a vec2 later, where we return distance and material ID or something\nvec2 map(vec3 pos){\n    int material = 0;\n    float dist = 1000.0; // init as far??\n    \n    if (pos.y <= -5.0) {\n        // very simple ground plane?\n        return vec2(0.0, 1.0);\n    }\n    \n    // different shells\n    float ball = sdSphere(pos, 1.0); // blue water\n    material = 2;\n    float ball2 = sdSphere(pos, 1.0 + (0.05)*float(noise(pos*5.0)>0.5)); // green terrain?\n    if (ball2 < ball) material = 3;\n    dist = min(ball, ball2);\n    \n    \n    vec3 cloud_pos = pos;\n    cloud_pos.xz = pos.xz * rot2D(0.1*iTime);\n    float cloud_start = sdSphere(pos, 1.2); // lower edge of clouds, white?\n    float cloud_end = sdSphere(pos, 1.1 + (0.11)*float(noise(cloud_pos*8.0)>0.5)); // upper edge of clouds?\n        \n    float clouds = max(-cloud_start, cloud_end );\n    if (clouds < dist) material = 4;\n    //return vec2(clouds, 0.4);\n    \n    dist = min(dist, clouds);\n    \n    return vec2(dist, material);\n}\n\n\nvoid mainImage( out vec4 fragColor, in vec2 fragCoord )\n{\n    vec2 uv = (fragCoord * 2.0 - iResolution.xy)/iResolution.y;\n    vec2 m = (iMouse.xy * 2.0 - iResolution.xy)/iResolution.y;\n\n    vec3 col = vec3(0.05);\n    \n    \n    // camera setup\n    // ro = ray origin\n    vec3 ro = vec3(0.0, 0.0, -3.0);\n    // rd = ray direction // third element is the fov/focal length? Inverse pyramid!\n    vec3 rd = vec3(normalize(vec3(uv, 1.0)));\n    \n    // mouse control\n    ro.yz *= rot2D(-m.y);\n    rd.yz *= rot2D(-m.y);\n    \n    ro.xz *= rot2D(-m.x);\n    rd.xz *= rot2D(-m.x);\n    \n    \n    float total_dist = 0.0;\n    // p current position, initialized at the ro?\n    vec3 p = ro;\n    int material_ID = 0;\n    for (int i = 0; i < MAX_STEPS; i++){\n        vec2 res = map(p);\n        float d = res.x;\n        material_ID = int(res.y);\n        \n        p += (d*rd);\n        \n        // break near and far?\n        if (d > 100.0){\n            material_ID = 0;\n            break;\n        }\n        if (d < 0.001){\n            break;\n        }\n        // fake ao indicator\n        col.r += 0.02;\n        total_dist += d;\n    }\n    \n    \n    // material coloring.\n    if (material_ID >= 4) {\n        // 4 -> terrain ~ whiteish\n        col += vec3(0.8, 0.9, 0.9);\n    }\n    else if (material_ID >= 3) {\n        // 3 -> terrain ~ green\n        col += vec3(0.03, 0.6, 0.1);\n    }\n    else if (material_ID >= 2) {\n        // 2 -> water ~ blue\n        col += vec3(0.01, 0.02, 0.7);\n    }\n    else if (material_ID >= 1) {\n        // 1 -> floor ~ brown\n        col += vec3(0.3, 0.2, 0.1)*noise(p);\n    }\n    else {\n        // noting as in distance.. fog?\n        col = vec3(10.0/total_dist);\n    }\n    \n    \n    // col = vec3(noise(p));\n    // col = vec3(noise(vec3(uv.x*30.0, iTime, uv.y*20.0)));\n    fragColor = vec4(col,1.0);\n}\n\n\n\n\n\n\n\n\n\n// empty space to move the editor up :)\n\n\n\n\n\n\n",
+      "name": "Image",
+      "description": "",
+      "type": "image"
+    }
+  ]
+}

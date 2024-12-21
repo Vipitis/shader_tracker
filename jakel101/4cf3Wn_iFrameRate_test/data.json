@@ -1,0 +1,34 @@
+{
+  "ver": "0.1",
+  "info": {
+    "id": "4cf3Wn",
+    "date": "1702928031",
+    "viewed": 154,
+    "name": "iFrameRate test",
+    "username": "jakel101",
+    "description": "really simple shader to test iFrameRate functionality for matching it's behaviour. seems to be updated like ~2 times per second? definitely not every frame.",
+    "likes": 0,
+    "published": 3,
+    "flags": 0,
+    "usePreview": 0,
+    "tags": [
+      "test"
+    ],
+    "hasliked": 0
+  },
+  "renderpass": [
+    {
+      "inputs": [],
+      "outputs": [
+        {
+          "id": 37,
+          "channel": 0
+        }
+      ],
+      "code": "// see https://www.shadertoy.com/view/lsKGWV for a possible explanation\n\nvoid mainImage( out vec4 fragColor, in vec2 fragCoord )\n{\n    // Normalized pixel coordinates (from 0 to 1)\n    vec2 uv = fragCoord/iResolution.xy;\n    \n    vec3 col = vec3(0.0);\n    // 1.0/iTimeDelta at the top\n    col += (float((1.0/iTimeDelta) / 255.0 >= uv.x) * float(uv.y>=0.5));\n    // iFrameRate at the bottom\n    col += float(iFrameRate/ 255.0 >= uv.x) * float(uv.y<=0.5);\n    \n    // Output to screen\n    fragColor = vec4(col,1.0);\n}",
+      "name": "Image",
+      "description": "",
+      "type": "image"
+    }
+  ]
+}

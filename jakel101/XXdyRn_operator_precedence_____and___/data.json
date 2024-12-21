@@ -1,0 +1,35 @@
+{
+  "ver": "0.1",
+  "info": {
+    "id": "XXdyRn",
+    "date": "1734642443",
+    "viewed": 34,
+    "name": "operator precedence: << and + ",
+    "username": "jakel101",
+    "description": "so what do you see? and what is correct according to the spec? https://registry.khronos.org/OpenGL/specs/es/3.0/GLSL_ES_Specification_3.00.pdf 5.1 Operator precedence has addition above bitwise shift\ncorrect should be bot left like top left/right?",
+    "likes": 0,
+    "published": 3,
+    "flags": 0,
+    "usePreview": 0,
+    "tags": [
+      "test",
+      "bug"
+    ],
+    "hasliked": 0
+  },
+  "renderpass": [
+    {
+      "inputs": [],
+      "outputs": [
+        {
+          "id": 37,
+          "channel": 0
+        }
+      ],
+      "code": "void mainImage( out vec4 fragColor, in vec2 fragCoord )\n{\n    vec2 uv = (2.0 * fragCoord - iResolution.xy)/iResolution.y;\n    int val = 128;\n    \n    // first bitshift then addition\n    if (uv.x > 0.0 && uv.y > 0.0) { //top right\n        val = val << 2;\n        val = val + 254;\n    }    \n    // here addition clearly happens first\n    else if (uv.x > 0.0 && uv.y < 0.0) { // bot right\n        val = val << (2 + 254);\n    }\n    \n    // this is the questionable bit\n    else if (uv.x < 0.0 && uv.y < 0.0) { // bot left\n        val = val << 2 + 254;\n    }\n    \n    // here it's first shift and then addtion\n    else if (uv.x < 0.0 && uv.y > 0.0) { //top left\n        val = (val << 2) + 254;\n    }\n    \n    vec3 col = vec3(float(val)/2048.0);\n    fragColor = vec4(col,1.0);\n}",
+      "name": "Image",
+      "description": "",
+      "type": "image"
+    }
+  ]
+}
