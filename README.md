@@ -2,6 +2,9 @@
 
 WIP utility to track your public shadertoy shaders in a github repository.
 (maybe this should be a database instead...)
+(maybe this repo is just the tools, and the actual data is a submodule so it's tracked individually?)
+(should there be like a config file, or config CLI?)
+
 
 ### some goals:
 * [ ] download all public shaders via the API
@@ -18,8 +21,9 @@ WIP utility to track your public shadertoy shaders in a github repository.
 ### how to use:
 ```bash
 python gather.py
+python sort.py
 ```
-tbd.
+CLI flags: tbd.
 
 ### requirements:
 * [python requierements](/requierements.txt)
