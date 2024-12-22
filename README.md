@@ -1,5 +1,8 @@
 # Shader-track?
 
+> [!NOTE]
+> Still in early development
+
 WIP utility to track your public shadertoy shaders in a github repository.
 (maybe this should be a database instead...)
 (maybe this repo is just the tools, and the actual data is a submodule so it's tracked individually?)
