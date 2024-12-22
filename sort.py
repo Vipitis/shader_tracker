@@ -17,7 +17,7 @@ def display_field(shader_data) -> str:
     # TODO: relative timestamps somehow?
     retrieved = datetime.datetime.fromisoformat(shader_data["info"]["retrieved"]).strftime("%Y-%m-%d %H:%M")
     row_template = f""" \
-    | ![https://www.shadertoy.com/view/{shader_id}](https://www.shadertoy.com/media/shaders/{shader_id}.jpg) \
+    | [![link to source](https://www.shadertoy.com/media/shaders/{shader_id}.jpg)](https://www.shadertoy.com/view/{shader_id}) \
     | [**{name}**](#todo) <br> {description} \
     | published: {date}<br> last saved: {retrieved} |
     """
@@ -58,5 +58,6 @@ if __name__ == "__main__":
             markdown_text += display_field(shader)
     markdown_text += "\n" # lazy footer?
 
-    with open(os.path.join(user_name, "gallery.md"), "w") as f:
+    with open(os.path.join(user_name, "README.md"), "w") as f:
+        # TODO: can we use a different name? but README.md gets displayed on github (once you scroll down?)
         f.write(markdown_text)
