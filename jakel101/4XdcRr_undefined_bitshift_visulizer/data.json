@@ -1,0 +1,36 @@
+{
+  "ver": "0.1",
+  "info": {
+    "id": "4XdcRr",
+    "date": "1734655998",
+    "viewed": 59,
+    "name": "undefined bitshift visulizer",
+    "username": "jakel101",
+    "description": "the spec says that bitshifts greater than 31 bits are undefined. and the signed bit gets pushed away to.\nSo what do you see here?",
+    "likes": 0,
+    "published": 3,
+    "flags": 0,
+    "usePreview": 0,
+    "tags": [
+      "visualization",
+      "debug"
+    ],
+    "hasliked": 0,
+    "retrieved": "2024-12-26T23:42:23.839759+00:00"
+  },
+  "renderpass": [
+    {
+      "inputs": [],
+      "outputs": [
+        {
+          "id": 37,
+          "channel": 0
+        }
+      ],
+      "code": "// Apache 2.0 no patents \u00b0!\u00b0\n\n# define LOW -16\n# define HIGH 48\n// shows the range from what happens with\n// 1. negative bitshifts LOW..-1]\n// 2. defined bitshifts 0..31]\n// 3. undefined bitshifts [32..HIGH\n// 4. uint vs int (left vs right)\nvoid mainImage( out vec4 fragColor, in vec2 fragCoord )\n{\n    vec2 uv = fragCoord/iResolution.xy;    \n    \n    // the initial value we are shifting (up)\n    int init = floatBitsToInt((iMouse.x/iResolution.x)+iTime); // consider pausing\n    \n    const float range = float(abs(LOW-HIGH));\n    int x_shift = int(mod(uv.x * range*2.0, range))+LOW; // so it goes LOW..HIGH twice\n    int y_bit = int(uv.y*32.0); // sorta the y index\n    \n    vec3 col = vec3(0.06); // background == \"off\" color\n    if (x_shift == 0) col.g = 0.5; // visualize the unshifted col\n    bool bit_mask; // where bits are on or off....\n    \n    // TODO: calulate the bitmask for uint and int everywhere so you can check for differences!\n    // left half int\n    if (uv.x < 0.5){\n        int val = int(init);\n        val <<= x_shift;\n        bit_mask = bool(val&(1<<y_bit)); // get the bit state per cell like this\n        if (y_bit == 31) col.b = 0.5; // visualize the sign bit\n    \n    }\n    // right half uint\n    else {\n        uint val2 = uint(init);\n        val2 <<= x_shift;\n        bit_mask = bool(val2&(1u<<y_bit));\n        col.r = 0.5; // indicate the uint side better\n    }\n    \n    \n    vec3 on_col = vec3(0.95, 0.95, 0.5);\n    col = mix(col, on_col, float(bit_mask)); // actual color happens here!\n    // little \"bulb\" shape for the cells to make it easier to count?\n    col *=vec3(1.4-length(fract(vec2(uv.x * 2.0 * range, uv.y * 32.0))-vec2(0.5))*1.0);\n    //col.b = float(y_bit)/32.0;\n    fragColor = vec4(col,1.0);\n}",
+      "name": "Image",
+      "description": "",
+      "type": "image"
+    }
+  ]
+}

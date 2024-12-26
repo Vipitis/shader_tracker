@@ -28,7 +28,6 @@ if __name__ == "__main__":
         loaded_data = json.load(f)
 
     user_name = loaded_data["userName"]
-    retrieval_time = loaded_data["date"]
     print(f"Sorting shaders for user {user_name}")
     # TODO: extract to function(s)
     # make one folder per shader?
@@ -38,14 +37,12 @@ if __name__ == "__main__":
         normalized_name = "".join(
             [c if c.isalnum() else "_" for c in shader["info"]["name"]]
         )
+        # TODO: handle renaming somehow? (git mv tracking too?)
         shader_path = os.path.join(
             user_name, f'{shader["info"]["id"]}_{normalized_name}'
         )
         os.makedirs(shader_path, exist_ok=True)
         with open(os.path.join(shader_path, "data.json"), "w") as f:
-            shader["info"]["retrieved"] = (
-                retrieval_time  # to know how outdated the local copy is
-            )
             json.dump(shader, f, indent=2)
         for renderpass in shader["renderpass"]:
             code, rp_name = renderpass["code"], renderpass["name"]
