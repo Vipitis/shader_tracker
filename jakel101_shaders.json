@@ -1,14 +1,202 @@
 {
   "userName": "jakel101",
-  "date": "2024-12-26T23:42:23.839759+00:00",
-  "numShaders": 42,
+  "date": "2025-01-02T21:40:36.931297+00:00",
+  "numShaders": 44,
   "shaders": [
+    {
+      "ver": "0.1",
+      "info": {
+        "id": "lXyyzR",
+        "date": "1735848777",
+        "viewed": 13,
+        "name": "Persistent Music Visualizer",
+        "username": "jakel101",
+        "description": "to have some of the element be reactive over time, the persistence is done over time in a Buffer.\nChange the Music in Buffer A Channel1\nChange channel0 to be sampled nearest instead of linear\ndeveloped on 165 Hz, might look worse on 60!",
+        "likes": 1,
+        "published": 3,
+        "flags": 32,
+        "usePreview": 0,
+        "tags": [
+          "music",
+          "visualizer",
+          "infinity"
+        ],
+        "hasliked": 0,
+        "retrieved": "2025-01-02T21:40:36.931297+00:00"
+      },
+      "renderpass": [
+        {
+          "inputs": [
+            {
+              "id": 257,
+              "src": "/media/previz/buffer00.png",
+              "ctype": "buffer",
+              "channel": 0,
+              "sampler": {
+                "filter": "linear",
+                "wrap": "repeat",
+                "vflip": "true",
+                "srgb": "false",
+                "internal": "byte"
+              },
+              "published": 1
+            }
+          ],
+          "outputs": [
+            {
+              "id": 37,
+              "channel": 0
+            }
+          ],
+          "code": "// Apache 2.0 no patents `.\u00b4\n\n// Image pass is mainly used for displaying the Buffer A \"background\"\n// Visualizer is purely done in Buffer A!\n// to change the music or try something different, change Channel1 in Buffer A!\n\nvoid mainImage( out vec4 fragColor, in vec2 fragCoord )\n{\n    vec2 uv = fragCoord/iResolution.xy;\n\n    vec4 bg = texture(iChannel0, uv);\n    \n    fragColor = vec4(bg.rgb, 1.0);\n}",
+          "name": "Image",
+          "description": "",
+          "type": "image"
+        },
+        {
+          "inputs": [
+            {
+              "id": 35,
+              "src": "/media/a/48e2d9ef22ca6673330b8c38a260c87694d2bbc94c19fec9dfa4a1222c364a99.mp3",
+              "ctype": "music",
+              "channel": 1,
+              "sampler": {
+                "filter": "linear",
+                "wrap": "clamp",
+                "vflip": "true",
+                "srgb": "false",
+                "internal": "byte"
+              },
+              "published": 1
+            },
+            {
+              "id": 257,
+              "src": "/media/previz/buffer00.png",
+              "ctype": "buffer",
+              "channel": 0,
+              "sampler": {
+                "filter": "linear",
+                "wrap": "clamp",
+                "vflip": "true",
+                "srgb": "false",
+                "internal": "byte"
+              },
+              "published": 1
+            }
+          ],
+          "outputs": [
+            {
+              "id": 257,
+              "channel": 0
+            }
+          ],
+          "code": "// Buffer A does the \"animation\"\n// basic idea is to avoid any kind of integration and just use time to expand\n// and we hide the infinity by creating new \"particles\" as dots in the center\n// we might draw something on top of that in a different pass.\n\n//TODO: fake \"stars\"?\n\n# define TAU 6.283185\nfloat sdCircle(vec2 pos, float radius){\n    return length(pos) - radius;\n}\n\nvoid mainImage( out vec4 fragColor, in vec2 fragCoord )\n{\n    vec2 uv = fragCoord/iResolution.xy;    \n    float beat_wf = texelFetch(iChannel1, ivec2(1,0), 0).r; // the sample point might need to be changed \n    \n    vec4 col = vec4(0.02); // init color\n    col.a = 0.0; // do we need alpha compositing here?\n    \n    float speed = 0.998 - (0.008*beat_wf); // this number is influenced every frame by the sampled music    \n    vec2 st = uv-vec2(0.5);// texture sampling coordinates have to be moved than scaled\n    st *= speed;// -(length(st)*0.02); // positively or negatively warp space on the edges?\n    st += vec2(0.5);  // and finally moved again        \n    vec4 bg_scaled = texture(iChannel0, st);\n    \n    vec2 center_uv = uv - vec2(0.5); // +sin(iTime)*0.1); // if you move this it get's really trippy\n    center_uv.x = abs(center_uv.x); // mirror horizontally\n    float phi = mod(atan(center_uv.x, center_uv.y), TAU)/TAU*2.0; // these are pseudo polar coordinates\n    float fft = texelFetch(iChannel1, ivec2(int(phi*512.0),1), 0).x;\n    \n    float shape_dist = sdCircle(center_uv, 0.2*fft);\n    float shape = smoothstep(0.008, 0.0, shape_dist); // the first value has a strong impact\n    \n    vec3 rainbow = vec3(sin(iTime + TAU*vec3(0.0, 0.33, 0.66))); // approximate TAU thirds for RGB rotation\n    \n    col = mix(col, vec4(rainbow,1.0), shape); // basically set the alpha\n    col.rgb = mix(bg_scaled.rgb, col.rgb, col.a);\n    \n    fragColor = vec4(col);\n}",
+          "name": "Buffer A",
+          "description": "",
+          "type": "buffer"
+        }
+      ]
+    },
+    {
+      "ver": "0.1",
+      "info": {
+        "id": "4XcyR2",
+        "date": "1735523996",
+        "viewed": 87,
+        "name": "particles by density? (wip)",
+        "username": "jakel101",
+        "description": "I had some ideas for 3D voxels, so I am trying a 2D thing first... not sure where this will go-\n\nidea is end up with something emergent that approximates gravity",
+        "likes": 5,
+        "published": 3,
+        "flags": 32,
+        "usePreview": 0,
+        "tags": [
+          "simulation",
+          "particles",
+          "cellular"
+        ],
+        "hasliked": 0,
+        "retrieved": "2025-01-02T21:40:36.931297+00:00"
+      },
+      "renderpass": [
+        {
+          "inputs": [
+            {
+              "id": 257,
+              "src": "/media/previz/buffer00.png",
+              "ctype": "buffer",
+              "channel": 0,
+              "sampler": {
+                "filter": "nearest",
+                "wrap": "repeat",
+                "vflip": "true",
+                "srgb": "false",
+                "internal": "byte"
+              },
+              "published": 1
+            }
+          ],
+          "outputs": [
+            {
+              "id": 37,
+              "channel": 0
+            }
+          ],
+          "code": "// Apache 2.0 no Patents _^-^_\n\n// Image pass just used for displaying right now...\n// maybe I will do stuff like color palettes or something.\nvoid mainImage( out vec4 fragColor, in vec2 fragCoord )\n{\n    vec2 uv = fragCoord/iResolution.xy;\n    vec4 values = texture(iChannel0, uv);\n    if (uv.x > 0.5) {\n        values.xy = values.xy*0.5;\n    }    \n    fragColor = vec4(values.yxz,1.0); //swaped rg to look better\n}",
+          "name": "Image",
+          "description": "",
+          "type": "image"
+        },
+        {
+          "inputs": [
+            {
+              "id": 5,
+              "src": "/media/a/8de3a3924cb95bd0e95a443fff0326c869f9d4979cd1d5b6e94e2a01f5be53e9.jpg",
+              "ctype": "texture",
+              "channel": 1,
+              "sampler": {
+                "filter": "mipmap",
+                "wrap": "repeat",
+                "vflip": "true",
+                "srgb": "false",
+                "internal": "byte"
+              },
+              "published": 1
+            },
+            {
+              "id": 257,
+              "src": "/media/previz/buffer00.png",
+              "ctype": "buffer",
+              "channel": 0,
+              "sampler": {
+                "filter": "nearest",
+                "wrap": "repeat",
+                "vflip": "true",
+                "srgb": "false",
+                "internal": "byte"
+              },
+              "published": 1
+            }
+          ],
+          "outputs": [
+            {
+              "id": 257,
+              "channel": 0
+            }
+          ],
+          "code": "// Buffer A contains the data, the pass makes the calucaltions\n// setting up the iChannel0 input (=Buffer A) with nearest and repeat is important!\n\n\n//extremely fun parameter to experiment with\n//try numbers smaller than 1 as well!\n# define INERTIA 1.12\n\nvec4 init(vec2 uv){\n    // load some shape from texture for the initial distribution?\n    vec4 txt = texture(iChannel1, uv);\n    //return txt;\n    //txt = vec4(length(uv-vec2(0.5))); // simple pattern for a test\n    //return vec4(vec2(0.01), txt.b, 0.0); //very low initial velocity?\n    float init_dens = 0.5;\n    \n    return vec4(txt.rg-vec2(0.5), init_dens, 0.0);\n}\n\n\n\nvoid mainImage( out vec4 fragColor, in vec2 fragCoord )\n{\n    vec2 uv = fragCoord/iResolution.xy;\n    // load something simple?\n    // TODO: draw with the mouse also an option?\n    if (iFrame <= 2) {\n        fragColor = init(uv);\n        return;\n    }\n    \n    // load the data\n    vec4 prev = texelFetch(iChannel0,ivec2(fragCoord), 0);\n    // unpack components\n    vec2 vel = prev.xy;\n    float density = prev.z; //(blue)\n    //prev.w; // currently unused?\n    \n    \n    // idea: density accumulates (gravity?)\n    // but we only look at the near pixel neighbors\n    // density gets removed or added based on density of direct neighbors\n    // only if, and proportional to the direction they are pointing at me\n    \n    float next_d = density;\n    next_d *= 1.0 - clamp(0.0, INERTIA, length(vel)); // this much \"moves away\"\n    vec2 next_vel = vel; // keep track (start with current I guess).\n    float largest_d = 0.0;\n    for(int i = -1; i<2; i++){\n        // i is x neighborhood?\n        // j is y neighborhood!\n        // we start at bottom left!\n        for(int j = -1; j<2; j++){            \n            if (i==0 && j==0){\n                continue;\n            }\n            // ensure it wraps around!\n            ivec2 sample_st = ivec2(fragCoord)+ivec2(i,j);\n            sample_st.x = int(mod(float(sample_st.x),iResolution.x));\n            sample_st.y = int(mod(float(sample_st.y),iResolution.y));\n            vec4 neighbor = texelFetch(iChannel0, sample_st, 0);\n            \n            // n_prefix for neighbor ::\n            float n_d = max(0.0,neighbor.z); //this shouldn't ever be negative anyway!!\n            vec2 n_v = neighbor.xy;\n            \n            // 8 neighbors, with the following normalized vectors\n            // (-0.5, 0.5)  (0.0, 1.0)  (0.5, 0.5)\n            // (-1.0, 0.0)  [ our pov]  (1.0, 0.0) \n            // (-0.5,-0.5)  (0.0,-1.0)  (0.5,-0.5)\n            // normalized might actually be 1/sqrt(2)\n            vec2 n_dir = normalize(vec2(i, j)); //direction towards that neighbor\n            // maybe the corners need to be sqrt(2) length? (it's normalized anyway)\n            //if (i*j > 0) n_d /= sqrt(2.0);\n            \n            next_d += max(0.0, dot(n_dir, normalize(n_v))) * n_d; //accumulating neighboring densities here. inverting n_d should be done?!?! \n            // next vel is weighted sum of neighbors density and direction.\n            next_vel += n_dir * (n_d * 0.125);\n            \n        }        \n    }\n    \n    //next_vel *= 0.99999; //slow down over time to avoid acceleration?        \n    \n    \n    fragColor = vec4(next_vel, clamp(0.0, 20.0, next_d), 0.0);\n}",
+          "name": "Buffer A",
+          "description": "",
+          "type": "buffer"
+        }
+      ]
+    },
     {
       "ver": "0.1",
       "info": {
         "id": "4XdcRr",
         "date": "1734655998",
-        "viewed": 59,
+        "viewed": 72,
         "name": "undefined bitshift visulizer",
         "username": "jakel101",
         "description": "the spec says that bitshifts greater than 31 bits are undefined. and the signed bit gets pushed away to.\nSo what do you see here?",
@@ -21,7 +209,7 @@
           "debug"
         ],
         "hasliked": 0,
-        "retrieved": "2024-12-26T23:42:23.839759+00:00"
+        "retrieved": "2025-01-02T21:40:36.931297+00:00"
       },
       "renderpass": [
         {
@@ -44,7 +232,7 @@
       "info": {
         "id": "XXdyRn",
         "date": "1734642443",
-        "viewed": 52,
+        "viewed": 58,
         "name": "operator precedence: << and + ",
         "username": "jakel101",
         "description": "so what do you see? and what is correct according to the spec? https://registry.khronos.org/OpenGL/specs/es/3.0/GLSL_ES_Specification_3.00.pdf 5.1 Operator precedence has addition above bitwise shift\ncorrect should be bot left like top left/right?",
@@ -57,7 +245,7 @@
           "bug"
         ],
         "hasliked": 0,
-        "retrieved": "2024-12-26T23:42:23.839759+00:00"
+        "retrieved": "2025-01-02T21:40:36.931297+00:00"
       },
       "renderpass": [
         {

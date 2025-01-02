@@ -3,7 +3,7 @@
   "info": {
     "id": "4XdcRr",
     "date": "1734655998",
-    "viewed": 59,
+    "viewed": 72,
     "name": "undefined bitshift visulizer",
     "username": "jakel101",
     "description": "the spec says that bitshifts greater than 31 bits are undefined. and the signed bit gets pushed away to.\nSo what do you see here?",
@@ -16,7 +16,7 @@
       "debug"
     ],
     "hasliked": 0,
-    "retrieved": "2024-12-26T23:42:23.839759+00:00"
+    "retrieved": "2025-01-02T21:40:36.931297+00:00"
   },
   "renderpass": [
     {

@@ -1,0 +1,94 @@
+{
+  "ver": "0.1",
+  "info": {
+    "id": "4XcyR2",
+    "date": "1735523996",
+    "viewed": 87,
+    "name": "particles by density? (wip)",
+    "username": "jakel101",
+    "description": "I had some ideas for 3D voxels, so I am trying a 2D thing first... not sure where this will go-\n\nidea is end up with something emergent that approximates gravity",
+    "likes": 5,
+    "published": 3,
+    "flags": 32,
+    "usePreview": 0,
+    "tags": [
+      "simulation",
+      "particles",
+      "cellular"
+    ],
+    "hasliked": 0,
+    "retrieved": "2025-01-02T21:40:36.931297+00:00"
+  },
+  "renderpass": [
+    {
+      "inputs": [
+        {
+          "id": 257,
+          "src": "/media/previz/buffer00.png",
+          "ctype": "buffer",
+          "channel": 0,
+          "sampler": {
+            "filter": "nearest",
+            "wrap": "repeat",
+            "vflip": "true",
+            "srgb": "false",
+            "internal": "byte"
+          },
+          "published": 1
+        }
+      ],
+      "outputs": [
+        {
+          "id": 37,
+          "channel": 0
+        }
+      ],
+      "code": "// Apache 2.0 no Patents _^-^_\n\n// Image pass just used for displaying right now...\n// maybe I will do stuff like color palettes or something.\nvoid mainImage( out vec4 fragColor, in vec2 fragCoord )\n{\n    vec2 uv = fragCoord/iResolution.xy;\n    vec4 values = texture(iChannel0, uv);\n    if (uv.x > 0.5) {\n        values.xy = values.xy*0.5;\n    }    \n    fragColor = vec4(values.yxz,1.0); //swaped rg to look better\n}",
+      "name": "Image",
+      "description": "",
+      "type": "image"
+    },
+    {
+      "inputs": [
+        {
+          "id": 5,
+          "src": "/media/a/8de3a3924cb95bd0e95a443fff0326c869f9d4979cd1d5b6e94e2a01f5be53e9.jpg",
+          "ctype": "texture",
+          "channel": 1,
+          "sampler": {
+            "filter": "mipmap",
+            "wrap": "repeat",
+            "vflip": "true",
+            "srgb": "false",
+            "internal": "byte"
+          },
+          "published": 1
+        },
+        {
+          "id": 257,
+          "src": "/media/previz/buffer00.png",
+          "ctype": "buffer",
+          "channel": 0,
+          "sampler": {
+            "filter": "nearest",
+            "wrap": "repeat",
+            "vflip": "true",
+            "srgb": "false",
+            "internal": "byte"
+          },
+          "published": 1
+        }
+      ],
+      "outputs": [
+        {
+          "id": 257,
+          "channel": 0
+        }
+      ],
+      "code": "// Buffer A contains the data, the pass makes the calucaltions\n// setting up the iChannel0 input (=Buffer A) with nearest and repeat is important!\n\n\n//extremely fun parameter to experiment with\n//try numbers smaller than 1 as well!\n# define INERTIA 1.12\n\nvec4 init(vec2 uv){\n    // load some shape from texture for the initial distribution?\n    vec4 txt = texture(iChannel1, uv);\n    //return txt;\n    //txt = vec4(length(uv-vec2(0.5))); // simple pattern for a test\n    //return vec4(vec2(0.01), txt.b, 0.0); //very low initial velocity?\n    float init_dens = 0.5;\n    \n    return vec4(txt.rg-vec2(0.5), init_dens, 0.0);\n}\n\n\n\nvoid mainImage( out vec4 fragColor, in vec2 fragCoord )\n{\n    vec2 uv = fragCoord/iResolution.xy;\n    // load something simple?\n    // TODO: draw with the mouse also an option?\n    if (iFrame <= 2) {\n        fragColor = init(uv);\n        return;\n    }\n    \n    // load the data\n    vec4 prev = texelFetch(iChannel0,ivec2(fragCoord), 0);\n    // unpack components\n    vec2 vel = prev.xy;\n    float density = prev.z; //(blue)\n    //prev.w; // currently unused?\n    \n    \n    // idea: density accumulates (gravity?)\n    // but we only look at the near pixel neighbors\n    // density gets removed or added based on density of direct neighbors\n    // only if, and proportional to the direction they are pointing at me\n    \n    float next_d = density;\n    next_d *= 1.0 - clamp(0.0, INERTIA, length(vel)); // this much \"moves away\"\n    vec2 next_vel = vel; // keep track (start with current I guess).\n    float largest_d = 0.0;\n    for(int i = -1; i<2; i++){\n        // i is x neighborhood?\n        // j is y neighborhood!\n        // we start at bottom left!\n        for(int j = -1; j<2; j++){            \n            if (i==0 && j==0){\n                continue;\n            }\n            // ensure it wraps around!\n            ivec2 sample_st = ivec2(fragCoord)+ivec2(i,j);\n            sample_st.x = int(mod(float(sample_st.x),iResolution.x));\n            sample_st.y = int(mod(float(sample_st.y),iResolution.y));\n            vec4 neighbor = texelFetch(iChannel0, sample_st, 0);\n            \n            // n_prefix for neighbor ::\n            float n_d = max(0.0,neighbor.z); //this shouldn't ever be negative anyway!!\n            vec2 n_v = neighbor.xy;\n            \n            // 8 neighbors, with the following normalized vectors\n            // (-0.5, 0.5)  (0.0, 1.0)  (0.5, 0.5)\n            // (-1.0, 0.0)  [ our pov]  (1.0, 0.0) \n            // (-0.5,-0.5)  (0.0,-1.0)  (0.5,-0.5)\n            // normalized might actually be 1/sqrt(2)\n            vec2 n_dir = normalize(vec2(i, j)); //direction towards that neighbor\n            // maybe the corners need to be sqrt(2) length? (it's normalized anyway)\n            //if (i*j > 0) n_d /= sqrt(2.0);\n            \n            next_d += max(0.0, dot(n_dir, normalize(n_v))) * n_d; //accumulating neighboring densities here. inverting n_d should be done?!?! \n            // next vel is weighted sum of neighbors density and direction.\n            next_vel += n_dir * (n_d * 0.125);\n            \n        }        \n    }\n    \n    //next_vel *= 0.99999; //slow down over time to avoid acceleration?        \n    \n    \n    fragColor = vec4(next_vel, clamp(0.0, 20.0, next_d), 0.0);\n}",
+      "name": "Buffer A",
+      "description": "",
+      "type": "buffer"
+    }
+  ]
+}

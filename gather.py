@@ -72,7 +72,7 @@ if __name__ == "__main__":
             continue  # skip any false hits (past download?)
 
         # compare with the local variant, changes in views or name or etc will be missed
-        local_version = local_shaders.get(shader_id, None)
+        local_version = local_shaders.get(shader_id, {"renderpass":None})
         if shader_data["Shader"]["renderpass"] == local_version["renderpass"]:
             same_count += 1
         else:
