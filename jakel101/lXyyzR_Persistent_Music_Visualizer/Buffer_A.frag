@@ -20,9 +20,11 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     
     float speed = 0.998 - (0.008*beat_wf); // this number is influenced every frame by the sampled music    
     vec2 st = uv-vec2(0.5);// texture sampling coordinates have to be moved than scaled
-    st *= speed;// -(length(st)*0.02); // positively or negatively warp space on the edges?
+    st *= speed;// -(length(st)*0.02); // positively or negatively warp space on the edges?    
+    //st *= mat2(cos(0.002), -sin(0.002), sin(0.002), cos(0.002)); // rotation?    
     st += vec2(0.5);  // and finally moved again        
     vec4 bg_scaled = texture(iChannel0, st);
+    //bg_scaled *= 0.997; // drop off over to highlight layers?
     
     vec2 center_uv = uv - vec2(0.5); // +sin(iTime)*0.1); // if you move this it get's really trippy
     center_uv.x = abs(center_uv.x); // mirror horizontally

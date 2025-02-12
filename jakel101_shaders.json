@@ -1,18 +1,106 @@
 {
   "userName": "jakel101",
-  "date": "2025-01-02T21:40:36.931297+00:00",
-  "numShaders": 44,
+  "date": "2025-02-12T20:14:30.129474+00:00",
+  "numShaders": 46,
   "shaders": [
+    {
+      "ver": "0.1",
+      "info": {
+        "id": "M3VBWt",
+        "date": "1738883384",
+        "viewed": 66,
+        "name": "orthographic heightmap (WIP)",
+        "username": "jakel101",
+        "description": "goal is to display some texture as a 3D heighmap. like an array of columns maybe?",
+        "likes": 2,
+        "published": 3,
+        "flags": 0,
+        "usePreview": 0,
+        "tags": [
+          "25d",
+          "heightmap",
+          "orthographic"
+        ],
+        "hasliked": 0,
+        "retrieved": "2025-02-12T20:14:30.129474+00:00"
+      },
+      "renderpass": [
+        {
+          "inputs": [
+            {
+              "id": 30,
+              "src": "/media/a/f735bee5b64ef98879dc618b016ecf7939a5756040c2cde21ccb15e69a6e1cfb.png",
+              "ctype": "texture",
+              "channel": 0,
+              "sampler": {
+                "filter": "mipmap",
+                "wrap": "clamp",
+                "vflip": "true",
+                "srgb": "false",
+                "internal": "byte"
+              },
+              "published": 1
+            }
+          ],
+          "outputs": [
+            {
+              "id": 37,
+              "channel": 0
+            }
+          ],
+          "code": "// APache 2.0 no patents \\_%_/\n# define PI 3.141592653\n\nvec4 RayPlaneIntersection(vec3 ro, vec3 rd, vec3 norm, float b){\n    // rayOrigin, rayDirection, normal of the plane and bias distance along that normal.\n    // t < 0 means a miss? (kinda impossible in the orthographic setup)\n    // t returns the total distance to that plane\n    // can hit from either side!!!\n    rd = normalize(rd); //redundant!\n    float t = -1.0;\n    t = dot((norm*b)-ro,norm)/dot(rd,norm);\n    vec3 p = ro+rd*t;\n    return vec4(p,t);\n}\n\nvec2 cubeHit(vec3 ro, vec3 rd, float width, float height){\n    //TODO: return side (1=top, 2=left, 3=right) and distance to a cuube\n    // side=0 means miss?\n    \n    // idea: 3 planes and they intersect at the top near corner.\n    //we take the furtherst distance as our\n    // normals for these\n    vec3 top = vec3(0,0,1);\n    vec3 sx = vec3(1,0,0);\n    vec3 sy = vec3(0,1,0);    \n    //force rd+ro to be the nearest? (maybe using sign(rd))\n    vec4 top_h = RayPlaneIntersection(ro, rd, top, height);\n    vec4 sx_h = RayPlaneIntersection(ro, rd, sx, width);\n    vec4 sy_h = RayPlaneIntersection(ro, rd, sy, width);\n    // we shouldn't get any misses... maybe edge on or something?\n    \n    \n    // actually we need to test all 6 planes (or use abs?)\n    // and by the order of intersections we know which face hit or if it's a miss...\n    // will build a paper model to write down the matrix.\n    \n    float t = -1.0;\n    vec4 hit;\n    int side = 0;\n    //shitty argmax\n    if (top_h.w > t) {hit = top_h; side=1;} //redundant?\n    else if (sx_h.w > hit.w) {hit = sx_h; side=2;}\n    else if (sy_h.w > hit.w) {hit = sy_h; side=3;}\n    // now t is the furthest hit distance\n    t = hit.w;\n    // but it still could be a miss...?\n    if (hit.z == 1.0 || abs(hit.x-0.001) > width || abs(hit.y) > width) {side=0; t= -1.0;};    \n    \n    return vec2(side, t);\n}\n\n\nvec4 sampleTexture(vec3 p, ivec3 cells) {\n    // transforms the world space 3D to a texture location 2D and runs a texel fetch for that voxel\n    // maps this into the cube of -1..1, -1..1, 0..1?\n    //returns 0 otherwise\n    \n    // move p back into 0..1\n    p += 1.0;\n    p *= 0.5;\n    \n    // sampling coordinates by element multiplication. BE CAREFUL WIHT float() constructors -.-\n    ivec2 st = ivec2(floor(p.xy*vec2(cells.xy)));\n    // exit ouside the area\n    if (st.x < 0 || st.y < 0 || st.x >= cells.x || st.y >= cells.y) return vec4(0);\n    vec4 res = texelFetch(iChannel0, st,0);\n    //return vec4(st, 0.0,0.0);\n    \n    return res;\n}\n\nvoid mainImage( out vec4 fragColor, in vec2 fragCoord )\n{\n    // uv normalized to [-1..1] for height with more width\n    vec2 uv = (2.0*fragCoord - iResolution.xy)/iResolution.y;\n    vec2 mo = (2.0*iMouse.xy - iResolution.xy)/iResolution.y;\n    // orbiting camera setup\n    float azimuth = PI*mo.x;\n    float altitude = 0.5*PI*clamp(-0.0, 1.0,mo.y); // maybe just positive?\n    vec3 camera_pos = vec3(\n        cos(azimuth)*cos(altitude),\n        sin(azimuth)*cos(altitude),\n        sin(altitude));    \n    // the camera is always looking \"at\" the origin\n    vec3 look_dir = vec3(0.0, 0.0, -0.0) -camera_pos;\n    //camera_pos += look_dir * -2.0; // moving the camera \"back\" to avoid occlusions?\n    // two vectors orthogonal to this camera direction (tagents?)\n    vec3 look_u = camera_pos + vec3(-sin(azimuth), cos(azimuth), 0.0);\n    vec3 look_v = normalize(cross(camera_pos, look_u)); // is this faster?\n    //vec3 look_v = camera_pos + vec3(sin(altitude)*-cos(azimuth), sin(altitude)*-sin(azimuth), cos(altitude));    \n    // camera plane(origin of each pixel) -> barycentric?\n    vec3 camera_plane = camera_pos + (look_u*uv.x) + (look_v*uv.y);\n\n    vec4 ground_plane = RayPlaneIntersection(camera_plane, look_dir, vec3(0,0,1),0.0);    \n    \n    vec3 col = vec3(step(0.0,uv),0.01);\n        \n    vec2 bbox = cubeHit(camera_plane, look_dir, 0.4, 0.1);        \n    col = sampleTexture(ground_plane.rgb, ivec3(64,32,0)).rgb;    \n    \n    //col.r = (bbox.x/4.0);\n    //col.b = (bbox.y);\n    \n    fragColor = vec4(vec3(col),1.0);\n}",
+          "name": "Image",
+          "description": "",
+          "type": "image"
+        }
+      ]
+    },
+    {
+      "ver": "0.1",
+      "info": {
+        "id": "X3KyRd",
+        "date": "1737245413",
+        "viewed": 51,
+        "name": "Orthographic path tracing? ",
+        "username": "jakel101",
+        "description": "trying to figure out how this would work (without looking it up)\n\nneeded for this unreleased one: https://www.shadertoy.com/view/lXycDz",
+        "likes": 0,
+        "published": 3,
+        "flags": 0,
+        "usePreview": 0,
+        "tags": [
+          "cube",
+          "orthographic"
+        ],
+        "hasliked": 0,
+        "retrieved": "2025-02-12T20:14:30.129474+00:00"
+      },
+      "renderpass": [
+        {
+          "inputs": [],
+          "outputs": [
+            {
+              "id": 37,
+              "channel": 0
+            }
+          ],
+          "code": "// Apache 2.0 no patent (O)-(O)\n// working out: https://www.desmos.com/3d/dfrawfz5oy\n// improved: https://www.desmos.com/3d/loyr0cvm2c\n// done:? https://www.desmos.com/3d/bewjnaugsh\n# define PI 3.141592654\n\n\n// TODO: struct sphere with .pos and .size maybe?\nvec4 RaySphereIntersection(vec3 ro, vec3 rd, vec3 sphere_center, float radius){\n    // find the depth of intersection?\n    \n    float h = dot(rd, ro); // get this distance to the center (projection depth?)\n    h = 1.0; // why is the above incorrect?\n    // point we trace towards center... plane paralle to the camera but at the position of the sphere\n    vec3 p = ro + (normalize(rd)*h);\n    float dist = length(p-sphere_center); // in the parallel plane\n    \n    // now get actual hit?\n    // need to find the exact h... which in this case is\n    vec3 o1 = cross(rd,p);\n    vec3 o2 = cross(rd, o1);\n    //TODO: this needs a min/clamp for undefined behavior. \n    float height = max(0.0,sqrt((radius - pow(length(o1),2.0) - pow(length(o2),2.0))));\n    \n    // TODO: this needs to actual depth with h?\n    float h2 = (h - height);\n    vec3 p2 = ro + (normalize(rd) * h2);\n\n    vec3 norm = normalize(p2 - sphere_center);\n    \n    // this is a miss essentially?\n    if (height <= 0.0) {\n        return vec4(-1.0);\n    }\n    //norm = vec3(height);      \n    \n    return vec4(vec3(norm), height); // negative values means no hit!\n}\n\n// in progress:\nvec4 RayCubeIntersection(vec3 ro, vec3 rd, vec3 size){\n    // returns normals and depth    \n    // let's just assumme there cube is next at the center and perfectly oriented\n    // AABB = axis aligned bounding box!    \n    \n    // distances to all six faces\n    vec3 h_pos = (size-ro)/rd;\n    vec3 h_neg = (-size-ro)/rd;\n    \n    // near and far sides\n    vec3 h_near = min(h_pos, h_neg);\n    vec3 h_far = max(h_pos, h_neg);\n    \n    // near and far intersection points\n    float t_near = max(h_near.x,max(h_near.y,h_near.z));\n    float t_far = min(h_far.x,min(h_far.y,h_far.z));\n    \n    // the position we actually hit.\n    vec3 p = ro + normalize(rd)*t_near;\n    \n    if (t_near > t_far ) return vec4(-1.); // miss\n    \n    // TODO: actual normals?\n    vec3 norm;\n    if (p.z >= size.z-0.0001) norm = vec3(0,0,1);\n    if (abs(p.y) >= size.y-0.0001) norm = vec3(0,1,0);\n    if (abs(p.x) >= size.x-0.0001) norm = vec3(1,0,0);\n    return vec4(norm, t_near);\n}\n\n\nvoid mainImage( out vec4 fragColor, in vec2 fragCoord )\n{    \n    vec2 uv = (2.0*fragCoord - iResolution.xy)/iResolution.y;\n    vec2 mo = (2.0*iMouse.xy - iResolution.xy)/iResolution.y;\n    // orbiting camera setup\n    float azimuth = PI*mo.x;\n    float altitude = 0.5*PI*clamp(-0.0, 1.0,mo.y); // maybe just positive?\n    vec3 camera_pos = vec3(\n        cos(azimuth)*cos(altitude),\n        sin(azimuth)*cos(altitude),\n        sin(altitude));    \n    // the camera is always looking \"at\" the origin\n    vec3 look_dir = vec3(0.0, 0.0, -0.0) -camera_pos;\n    //camera_pos += look_dir * -2.0; // moving the camera \"back\" to avoid occlusions?\n    // two vectors orthogonal to this camera direction (tagents?)\n    vec3 look_u = camera_pos + vec3(-sin(azimuth), cos(azimuth), 0.0);\n    vec3 look_v = normalize(cross(camera_pos, look_u)); // is this faster?\n    //vec3 look_v = camera_pos + vec3(sin(altitude)*-cos(azimuth), sin(altitude)*-sin(azimuth), cos(altitude));\n        \n    // camera plane(origin of each pixel) -> barycentric?\n    vec3 camera_plane = camera_pos + (look_u*uv.x) + (look_v*uv.y);\n    // TODO: redo this whole section as a matrix.\n    \n    \n    vec3 col = vec3(0.05);    \n    \n    vec3 p = camera_plane; //ray origin\n    vec4 res; //.rgb = normal, .w = distance//intersection\n    \n    res = RaySphereIntersection(p, look_dir, vec3(0.0, -0.0, 0.0), 0.5);\n    if (res.w < 1.0) res = RayCubeIntersection(p, look_dir, vec3(0.5));\n    \n    fragColor = res;    \n    return;\n    \n    //col = camera_plane;\n    \n    //col.xy = uv;\n    //col.rgb = pow(col.rgb, vec3(1.0/2.2)); // gamma correction?\n    fragColor = vec4(col*0.5,1.0);\n}",
+          "name": "Image",
+          "description": "",
+          "type": "image"
+        }
+      ]
+    },
     {
       "ver": "0.1",
       "info": {
         "id": "lXyyzR",
         "date": "1735848777",
-        "viewed": 13,
+        "viewed": 82,
         "name": "Persistent Music Visualizer",
         "username": "jakel101",
         "description": "to have some of the element be reactive over time, the persistence is done over time in a Buffer.\nChange the Music in Buffer A Channel1\nChange channel0 to be sampled nearest instead of linear\ndeveloped on 165 Hz, might look worse on 60!",
-        "likes": 1,
+        "likes": 2,
         "published": 3,
         "flags": 32,
         "usePreview": 0,
@@ -22,7 +110,7 @@
           "infinity"
         ],
         "hasliked": 0,
-        "retrieved": "2025-01-02T21:40:36.931297+00:00"
+        "retrieved": "2025-02-12T20:14:30.129474+00:00"
       },
       "renderpass": [
         {
@@ -90,7 +178,7 @@
               "channel": 0
             }
           ],
-          "code": "// Buffer A does the \"animation\"\n// basic idea is to avoid any kind of integration and just use time to expand\n// and we hide the infinity by creating new \"particles\" as dots in the center\n// we might draw something on top of that in a different pass.\n\n//TODO: fake \"stars\"?\n\n# define TAU 6.283185\nfloat sdCircle(vec2 pos, float radius){\n    return length(pos) - radius;\n}\n\nvoid mainImage( out vec4 fragColor, in vec2 fragCoord )\n{\n    vec2 uv = fragCoord/iResolution.xy;    \n    float beat_wf = texelFetch(iChannel1, ivec2(1,0), 0).r; // the sample point might need to be changed \n    \n    vec4 col = vec4(0.02); // init color\n    col.a = 0.0; // do we need alpha compositing here?\n    \n    float speed = 0.998 - (0.008*beat_wf); // this number is influenced every frame by the sampled music    \n    vec2 st = uv-vec2(0.5);// texture sampling coordinates have to be moved than scaled\n    st *= speed;// -(length(st)*0.02); // positively or negatively warp space on the edges?\n    st += vec2(0.5);  // and finally moved again        \n    vec4 bg_scaled = texture(iChannel0, st);\n    \n    vec2 center_uv = uv - vec2(0.5); // +sin(iTime)*0.1); // if you move this it get's really trippy\n    center_uv.x = abs(center_uv.x); // mirror horizontally\n    float phi = mod(atan(center_uv.x, center_uv.y), TAU)/TAU*2.0; // these are pseudo polar coordinates\n    float fft = texelFetch(iChannel1, ivec2(int(phi*512.0),1), 0).x;\n    \n    float shape_dist = sdCircle(center_uv, 0.2*fft);\n    float shape = smoothstep(0.008, 0.0, shape_dist); // the first value has a strong impact\n    \n    vec3 rainbow = vec3(sin(iTime + TAU*vec3(0.0, 0.33, 0.66))); // approximate TAU thirds for RGB rotation\n    \n    col = mix(col, vec4(rainbow,1.0), shape); // basically set the alpha\n    col.rgb = mix(bg_scaled.rgb, col.rgb, col.a);\n    \n    fragColor = vec4(col);\n}",
+          "code": "// Buffer A does the \"animation\"\n// basic idea is to avoid any kind of integration and just use time to expand\n// and we hide the infinity by creating new \"particles\" as dots in the center\n// we might draw something on top of that in a different pass.\n\n//TODO: fake \"stars\"?\n\n# define TAU 6.283185\nfloat sdCircle(vec2 pos, float radius){\n    return length(pos) - radius;\n}\n\nvoid mainImage( out vec4 fragColor, in vec2 fragCoord )\n{\n    vec2 uv = fragCoord/iResolution.xy;    \n    float beat_wf = texelFetch(iChannel1, ivec2(1,0), 0).r; // the sample point might need to be changed \n    \n    vec4 col = vec4(0.02); // init color\n    col.a = 0.0; // do we need alpha compositing here?\n    \n    float speed = 0.998 - (0.008*beat_wf); // this number is influenced every frame by the sampled music    \n    vec2 st = uv-vec2(0.5);// texture sampling coordinates have to be moved than scaled\n    st *= speed;// -(length(st)*0.02); // positively or negatively warp space on the edges?    \n    //st *= mat2(cos(0.002), -sin(0.002), sin(0.002), cos(0.002)); // rotation?    \n    st += vec2(0.5);  // and finally moved again        \n    vec4 bg_scaled = texture(iChannel0, st);\n    //bg_scaled *= 0.997; // drop off over to highlight layers?\n    \n    vec2 center_uv = uv - vec2(0.5); // +sin(iTime)*0.1); // if you move this it get's really trippy\n    center_uv.x = abs(center_uv.x); // mirror horizontally\n    float phi = mod(atan(center_uv.x, center_uv.y), TAU)/TAU*2.0; // these are pseudo polar coordinates\n    float fft = texelFetch(iChannel1, ivec2(int(phi*512.0),1), 0).x;\n    \n    float shape_dist = sdCircle(center_uv, 0.2*fft);\n    float shape = smoothstep(0.008, 0.0, shape_dist); // the first value has a strong impact\n    \n    vec3 rainbow = vec3(sin(iTime + TAU*vec3(0.0, 0.33, 0.66))); // approximate TAU thirds for RGB rotation\n    \n    col = mix(col, vec4(rainbow,1.0), shape); // basically set the alpha\n    col.rgb = mix(bg_scaled.rgb, col.rgb, col.a);\n    \n    fragColor = vec4(col);\n}",
           "name": "Buffer A",
           "description": "",
           "type": "buffer"
@@ -102,7 +190,7 @@
       "info": {
         "id": "4XcyR2",
         "date": "1735523996",
-        "viewed": 87,
+        "viewed": 121,
         "name": "particles by density? (wip)",
         "username": "jakel101",
         "description": "I had some ideas for 3D voxels, so I am trying a 2D thing first... not sure where this will go-\n\nidea is end up with something emergent that approximates gravity",
@@ -116,7 +204,7 @@
           "cellular"
         ],
         "hasliked": 0,
-        "retrieved": "2025-01-02T21:40:36.931297+00:00"
+        "retrieved": "2025-02-12T20:14:30.129474+00:00"
       },
       "renderpass": [
         {
@@ -196,7 +284,7 @@
       "info": {
         "id": "4XdcRr",
         "date": "1734655998",
-        "viewed": 72,
+        "viewed": 86,
         "name": "undefined bitshift visulizer",
         "username": "jakel101",
         "description": "the spec says that bitshifts greater than 31 bits are undefined. and the signed bit gets pushed away to.\nSo what do you see here?",
@@ -209,7 +297,7 @@
           "debug"
         ],
         "hasliked": 0,
-        "retrieved": "2025-01-02T21:40:36.931297+00:00"
+        "retrieved": "2025-02-12T20:14:30.129474+00:00"
       },
       "renderpass": [
         {

@@ -1,0 +1,52 @@
+{
+  "ver": "0.1",
+  "info": {
+    "id": "M3VBWt",
+    "date": "1738883384",
+    "viewed": 66,
+    "name": "orthographic heightmap (WIP)",
+    "username": "jakel101",
+    "description": "goal is to display some texture as a 3D heighmap. like an array of columns maybe?",
+    "likes": 2,
+    "published": 3,
+    "flags": 0,
+    "usePreview": 0,
+    "tags": [
+      "25d",
+      "heightmap",
+      "orthographic"
+    ],
+    "hasliked": 0,
+    "retrieved": "2025-02-12T20:14:30.129474+00:00"
+  },
+  "renderpass": [
+    {
+      "inputs": [
+        {
+          "id": 30,
+          "src": "/media/a/f735bee5b64ef98879dc618b016ecf7939a5756040c2cde21ccb15e69a6e1cfb.png",
+          "ctype": "texture",
+          "channel": 0,
+          "sampler": {
+            "filter": "mipmap",
+            "wrap": "clamp",
+            "vflip": "true",
+            "srgb": "false",
+            "internal": "byte"
+          },
+          "published": 1
+        }
+      ],
+      "outputs": [
+        {
+          "id": 37,
+          "channel": 0
+        }
+      ],
+      "code": "// APache 2.0 no patents \\_%_/\n# define PI 3.141592653\n\nvec4 RayPlaneIntersection(vec3 ro, vec3 rd, vec3 norm, float b){\n    // rayOrigin, rayDirection, normal of the plane and bias distance along that normal.\n    // t < 0 means a miss? (kinda impossible in the orthographic setup)\n    // t returns the total distance to that plane\n    // can hit from either side!!!\n    rd = normalize(rd); //redundant!\n    float t = -1.0;\n    t = dot((norm*b)-ro,norm)/dot(rd,norm);\n    vec3 p = ro+rd*t;\n    return vec4(p,t);\n}\n\nvec2 cubeHit(vec3 ro, vec3 rd, float width, float height){\n    //TODO: return side (1=top, 2=left, 3=right) and distance to a cuube\n    // side=0 means miss?\n    \n    // idea: 3 planes and they intersect at the top near corner.\n    //we take the furtherst distance as our\n    // normals for these\n    vec3 top = vec3(0,0,1);\n    vec3 sx = vec3(1,0,0);\n    vec3 sy = vec3(0,1,0);    \n    //force rd+ro to be the nearest? (maybe using sign(rd))\n    vec4 top_h = RayPlaneIntersection(ro, rd, top, height);\n    vec4 sx_h = RayPlaneIntersection(ro, rd, sx, width);\n    vec4 sy_h = RayPlaneIntersection(ro, rd, sy, width);\n    // we shouldn't get any misses... maybe edge on or something?\n    \n    \n    // actually we need to test all 6 planes (or use abs?)\n    // and by the order of intersections we know which face hit or if it's a miss...\n    // will build a paper model to write down the matrix.\n    \n    float t = -1.0;\n    vec4 hit;\n    int side = 0;\n    //shitty argmax\n    if (top_h.w > t) {hit = top_h; side=1;} //redundant?\n    else if (sx_h.w > hit.w) {hit = sx_h; side=2;}\n    else if (sy_h.w > hit.w) {hit = sy_h; side=3;}\n    // now t is the furthest hit distance\n    t = hit.w;\n    // but it still could be a miss...?\n    if (hit.z == 1.0 || abs(hit.x-0.001) > width || abs(hit.y) > width) {side=0; t= -1.0;};    \n    \n    return vec2(side, t);\n}\n\n\nvec4 sampleTexture(vec3 p, ivec3 cells) {\n    // transforms the world space 3D to a texture location 2D and runs a texel fetch for that voxel\n    // maps this into the cube of -1..1, -1..1, 0..1?\n    //returns 0 otherwise\n    \n    // move p back into 0..1\n    p += 1.0;\n    p *= 0.5;\n    \n    // sampling coordinates by element multiplication. BE CAREFUL WIHT float() constructors -.-\n    ivec2 st = ivec2(floor(p.xy*vec2(cells.xy)));\n    // exit ouside the area\n    if (st.x < 0 || st.y < 0 || st.x >= cells.x || st.y >= cells.y) return vec4(0);\n    vec4 res = texelFetch(iChannel0, st,0);\n    //return vec4(st, 0.0,0.0);\n    \n    return res;\n}\n\nvoid mainImage( out vec4 fragColor, in vec2 fragCoord )\n{\n    // uv normalized to [-1..1] for height with more width\n    vec2 uv = (2.0*fragCoord - iResolution.xy)/iResolution.y;\n    vec2 mo = (2.0*iMouse.xy - iResolution.xy)/iResolution.y;\n    // orbiting camera setup\n    float azimuth = PI*mo.x;\n    float altitude = 0.5*PI*clamp(-0.0, 1.0,mo.y); // maybe just positive?\n    vec3 camera_pos = vec3(\n        cos(azimuth)*cos(altitude),\n        sin(azimuth)*cos(altitude),\n        sin(altitude));    \n    // the camera is always looking \"at\" the origin\n    vec3 look_dir = vec3(0.0, 0.0, -0.0) -camera_pos;\n    //camera_pos += look_dir * -2.0; // moving the camera \"back\" to avoid occlusions?\n    // two vectors orthogonal to this camera direction (tagents?)\n    vec3 look_u = camera_pos + vec3(-sin(azimuth), cos(azimuth), 0.0);\n    vec3 look_v = normalize(cross(camera_pos, look_u)); // is this faster?\n    //vec3 look_v = camera_pos + vec3(sin(altitude)*-cos(azimuth), sin(altitude)*-sin(azimuth), cos(altitude));    \n    // camera plane(origin of each pixel) -> barycentric?\n    vec3 camera_plane = camera_pos + (look_u*uv.x) + (look_v*uv.y);\n\n    vec4 ground_plane = RayPlaneIntersection(camera_plane, look_dir, vec3(0,0,1),0.0);    \n    \n    vec3 col = vec3(step(0.0,uv),0.01);\n        \n    vec2 bbox = cubeHit(camera_plane, look_dir, 0.4, 0.1);        \n    col = sampleTexture(ground_plane.rgb, ivec3(64,32,0)).rgb;    \n    \n    //col.r = (bbox.x/4.0);\n    //col.b = (bbox.y);\n    \n    fragColor = vec4(vec3(col),1.0);\n}",
+      "name": "Image",
+      "description": "",
+      "type": "image"
+    }
+  ]
+}

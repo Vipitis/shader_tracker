@@ -3,11 +3,11 @@
   "info": {
     "id": "lXyyzR",
     "date": "1735848777",
-    "viewed": 13,
+    "viewed": 82,
     "name": "Persistent Music Visualizer",
     "username": "jakel101",
     "description": "to have some of the element be reactive over time, the persistence is done over time in a Buffer.\nChange the Music in Buffer A Channel1\nChange channel0 to be sampled nearest instead of linear\ndeveloped on 165 Hz, might look worse on 60!",
-    "likes": 1,
+    "likes": 2,
     "published": 3,
     "flags": 32,
     "usePreview": 0,
@@ -17,7 +17,7 @@
       "infinity"
     ],
     "hasliked": 0,
-    "retrieved": "2025-01-02T21:40:36.931297+00:00"
+    "retrieved": "2025-02-12T20:14:30.129474+00:00"
   },
   "renderpass": [
     {
@@ -85,7 +85,7 @@
           "channel": 0
         }
       ],
-      "code": "// Buffer A does the \"animation\"\n// basic idea is to avoid any kind of integration and just use time to expand\n// and we hide the infinity by creating new \"particles\" as dots in the center\n// we might draw something on top of that in a different pass.\n\n//TODO: fake \"stars\"?\n\n# define TAU 6.283185\nfloat sdCircle(vec2 pos, float radius){\n    return length(pos) - radius;\n}\n\nvoid mainImage( out vec4 fragColor, in vec2 fragCoord )\n{\n    vec2 uv = fragCoord/iResolution.xy;    \n    float beat_wf = texelFetch(iChannel1, ivec2(1,0), 0).r; // the sample point might need to be changed \n    \n    vec4 col = vec4(0.02); // init color\n    col.a = 0.0; // do we need alpha compositing here?\n    \n    float speed = 0.998 - (0.008*beat_wf); // this number is influenced every frame by the sampled music    \n    vec2 st = uv-vec2(0.5);// texture sampling coordinates have to be moved than scaled\n    st *= speed;// -(length(st)*0.02); // positively or negatively warp space on the edges?\n    st += vec2(0.5);  // and finally moved again        \n    vec4 bg_scaled = texture(iChannel0, st);\n    \n    vec2 center_uv = uv - vec2(0.5); // +sin(iTime)*0.1); // if you move this it get's really trippy\n    center_uv.x = abs(center_uv.x); // mirror horizontally\n    float phi = mod(atan(center_uv.x, center_uv.y), TAU)/TAU*2.0; // these are pseudo polar coordinates\n    float fft = texelFetch(iChannel1, ivec2(int(phi*512.0),1), 0).x;\n    \n    float shape_dist = sdCircle(center_uv, 0.2*fft);\n    float shape = smoothstep(0.008, 0.0, shape_dist); // the first value has a strong impact\n    \n    vec3 rainbow = vec3(sin(iTime + TAU*vec3(0.0, 0.33, 0.66))); // approximate TAU thirds for RGB rotation\n    \n    col = mix(col, vec4(rainbow,1.0), shape); // basically set the alpha\n    col.rgb = mix(bg_scaled.rgb, col.rgb, col.a);\n    \n    fragColor = vec4(col);\n}",
+      "code": "// Buffer A does the \"animation\"\n// basic idea is to avoid any kind of integration and just use time to expand\n// and we hide the infinity by creating new \"particles\" as dots in the center\n// we might draw something on top of that in a different pass.\n\n//TODO: fake \"stars\"?\n\n# define TAU 6.283185\nfloat sdCircle(vec2 pos, float radius){\n    return length(pos) - radius;\n}\n\nvoid mainImage( out vec4 fragColor, in vec2 fragCoord )\n{\n    vec2 uv = fragCoord/iResolution.xy;    \n    float beat_wf = texelFetch(iChannel1, ivec2(1,0), 0).r; // the sample point might need to be changed \n    \n    vec4 col = vec4(0.02); // init color\n    col.a = 0.0; // do we need alpha compositing here?\n    \n    float speed = 0.998 - (0.008*beat_wf); // this number is influenced every frame by the sampled music    \n    vec2 st = uv-vec2(0.5);// texture sampling coordinates have to be moved than scaled\n    st *= speed;// -(length(st)*0.02); // positively or negatively warp space on the edges?    \n    //st *= mat2(cos(0.002), -sin(0.002), sin(0.002), cos(0.002)); // rotation?    \n    st += vec2(0.5);  // and finally moved again        \n    vec4 bg_scaled = texture(iChannel0, st);\n    //bg_scaled *= 0.997; // drop off over to highlight layers?\n    \n    vec2 center_uv = uv - vec2(0.5); // +sin(iTime)*0.1); // if you move this it get's really trippy\n    center_uv.x = abs(center_uv.x); // mirror horizontally\n    float phi = mod(atan(center_uv.x, center_uv.y), TAU)/TAU*2.0; // these are pseudo polar coordinates\n    float fft = texelFetch(iChannel1, ivec2(int(phi*512.0),1), 0).x;\n    \n    float shape_dist = sdCircle(center_uv, 0.2*fft);\n    float shape = smoothstep(0.008, 0.0, shape_dist); // the first value has a strong impact\n    \n    vec3 rainbow = vec3(sin(iTime + TAU*vec3(0.0, 0.33, 0.66))); // approximate TAU thirds for RGB rotation\n    \n    col = mix(col, vec4(rainbow,1.0), shape); // basically set the alpha\n    col.rgb = mix(bg_scaled.rgb, col.rgb, col.a);\n    \n    fragColor = vec4(col);\n}",
       "name": "Buffer A",
       "description": "",
       "type": "buffer"

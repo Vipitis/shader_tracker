@@ -1,0 +1,36 @@
+{
+  "ver": "0.1",
+  "info": {
+    "id": "X3KyRd",
+    "date": "1737245413",
+    "viewed": 51,
+    "name": "Orthographic path tracing? ",
+    "username": "jakel101",
+    "description": "trying to figure out how this would work (without looking it up)\n\nneeded for this unreleased one: https://www.shadertoy.com/view/lXycDz",
+    "likes": 0,
+    "published": 3,
+    "flags": 0,
+    "usePreview": 0,
+    "tags": [
+      "cube",
+      "orthographic"
+    ],
+    "hasliked": 0,
+    "retrieved": "2025-02-12T20:14:30.129474+00:00"
+  },
+  "renderpass": [
+    {
+      "inputs": [],
+      "outputs": [
+        {
+          "id": 37,
+          "channel": 0
+        }
+      ],
+      "code": "// Apache 2.0 no patent (O)-(O)\n// working out: https://www.desmos.com/3d/dfrawfz5oy\n// improved: https://www.desmos.com/3d/loyr0cvm2c\n// done:? https://www.desmos.com/3d/bewjnaugsh\n# define PI 3.141592654\n\n\n// TODO: struct sphere with .pos and .size maybe?\nvec4 RaySphereIntersection(vec3 ro, vec3 rd, vec3 sphere_center, float radius){\n    // find the depth of intersection?\n    \n    float h = dot(rd, ro); // get this distance to the center (projection depth?)\n    h = 1.0; // why is the above incorrect?\n    // point we trace towards center... plane paralle to the camera but at the position of the sphere\n    vec3 p = ro + (normalize(rd)*h);\n    float dist = length(p-sphere_center); // in the parallel plane\n    \n    // now get actual hit?\n    // need to find the exact h... which in this case is\n    vec3 o1 = cross(rd,p);\n    vec3 o2 = cross(rd, o1);\n    //TODO: this needs a min/clamp for undefined behavior. \n    float height = max(0.0,sqrt((radius - pow(length(o1),2.0) - pow(length(o2),2.0))));\n    \n    // TODO: this needs to actual depth with h?\n    float h2 = (h - height);\n    vec3 p2 = ro + (normalize(rd) * h2);\n\n    vec3 norm = normalize(p2 - sphere_center);\n    \n    // this is a miss essentially?\n    if (height <= 0.0) {\n        return vec4(-1.0);\n    }\n    //norm = vec3(height);      \n    \n    return vec4(vec3(norm), height); // negative values means no hit!\n}\n\n// in progress:\nvec4 RayCubeIntersection(vec3 ro, vec3 rd, vec3 size){\n    // returns normals and depth    \n    // let's just assumme there cube is next at the center and perfectly oriented\n    // AABB = axis aligned bounding box!    \n    \n    // distances to all six faces\n    vec3 h_pos = (size-ro)/rd;\n    vec3 h_neg = (-size-ro)/rd;\n    \n    // near and far sides\n    vec3 h_near = min(h_pos, h_neg);\n    vec3 h_far = max(h_pos, h_neg);\n    \n    // near and far intersection points\n    float t_near = max(h_near.x,max(h_near.y,h_near.z));\n    float t_far = min(h_far.x,min(h_far.y,h_far.z));\n    \n    // the position we actually hit.\n    vec3 p = ro + normalize(rd)*t_near;\n    \n    if (t_near > t_far ) return vec4(-1.); // miss\n    \n    // TODO: actual normals?\n    vec3 norm;\n    if (p.z >= size.z-0.0001) norm = vec3(0,0,1);\n    if (abs(p.y) >= size.y-0.0001) norm = vec3(0,1,0);\n    if (abs(p.x) >= size.x-0.0001) norm = vec3(1,0,0);\n    return vec4(norm, t_near);\n}\n\n\nvoid mainImage( out vec4 fragColor, in vec2 fragCoord )\n{    \n    vec2 uv = (2.0*fragCoord - iResolution.xy)/iResolution.y;\n    vec2 mo = (2.0*iMouse.xy - iResolution.xy)/iResolution.y;\n    // orbiting camera setup\n    float azimuth = PI*mo.x;\n    float altitude = 0.5*PI*clamp(-0.0, 1.0,mo.y); // maybe just positive?\n    vec3 camera_pos = vec3(\n        cos(azimuth)*cos(altitude),\n        sin(azimuth)*cos(altitude),\n        sin(altitude));    \n    // the camera is always looking \"at\" the origin\n    vec3 look_dir = vec3(0.0, 0.0, -0.0) -camera_pos;\n    //camera_pos += look_dir * -2.0; // moving the camera \"back\" to avoid occlusions?\n    // two vectors orthogonal to this camera direction (tagents?)\n    vec3 look_u = camera_pos + vec3(-sin(azimuth), cos(azimuth), 0.0);\n    vec3 look_v = normalize(cross(camera_pos, look_u)); // is this faster?\n    //vec3 look_v = camera_pos + vec3(sin(altitude)*-cos(azimuth), sin(altitude)*-sin(azimuth), cos(altitude));\n        \n    // camera plane(origin of each pixel) -> barycentric?\n    vec3 camera_plane = camera_pos + (look_u*uv.x) + (look_v*uv.y);\n    // TODO: redo this whole section as a matrix.\n    \n    \n    vec3 col = vec3(0.05);    \n    \n    vec3 p = camera_plane; //ray origin\n    vec4 res; //.rgb = normal, .w = distance//intersection\n    \n    res = RaySphereIntersection(p, look_dir, vec3(0.0, -0.0, 0.0), 0.5);\n    if (res.w < 1.0) res = RayCubeIntersection(p, look_dir, vec3(0.5));\n    \n    fragColor = res;    \n    return;\n    \n    //col = camera_plane;\n    \n    //col.xy = uv;\n    //col.rgb = pow(col.rgb, vec3(1.0/2.2)); // gamma correction?\n    fragColor = vec4(col*0.5,1.0);\n}",
+      "name": "Image",
+      "description": "",
+      "type": "image"
+    }
+  ]
+}
