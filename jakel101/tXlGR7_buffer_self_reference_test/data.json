@@ -1,0 +1,149 @@
+{
+  "ver": "0.1",
+  "info": {
+    "id": "tXlGR7",
+    "date": "1742863063",
+    "viewed": 42,
+    "name": "buffer self reference test",
+    "username": "jakel101",
+    "description": "little illustration on how multiple buffer pass interact with one another and their render order. used for unit testing",
+    "likes": 0,
+    "published": 3,
+    "flags": 32,
+    "usePreview": 0,
+    "tags": [
+      "test",
+      "multipass"
+    ],
+    "hasliked": 0,
+    "retrieved": "2025-03-29T23:01:09.777249+00:00"
+  },
+  "renderpass": [
+    {
+      "inputs": [
+        {
+          "id": 257,
+          "src": "/media/previz/buffer00.png",
+          "ctype": "buffer",
+          "channel": 0,
+          "sampler": {
+            "filter": "linear",
+            "wrap": "clamp",
+            "vflip": "true",
+            "srgb": "false",
+            "internal": "byte"
+          },
+          "published": 1
+        },
+        {
+          "id": 258,
+          "src": "/media/previz/buffer01.png",
+          "ctype": "buffer",
+          "channel": 1,
+          "sampler": {
+            "filter": "linear",
+            "wrap": "clamp",
+            "vflip": "true",
+            "srgb": "false",
+            "internal": "byte"
+          },
+          "published": 1
+        }
+      ],
+      "outputs": [
+        {
+          "id": 37,
+          "channel": 0
+        }
+      ],
+      "code": "// Apache 2.0 not patents [*|*]\n\nvoid mainImage( out vec4 fragColor, in vec2 fragCoord )\n{\n    vec2 uv = fragCoord/iResolution.xy;\n    vec4 c0 = texture(iChannel0, uv);\n    vec4 c1 = texture(iChannel1, uv);\n    fragColor = vec4(mix(c0.rgb, c1.rgb, step(0.5, uv.x)), 1.0);\n}",
+      "name": "Image",
+      "description": "",
+      "type": "image"
+    },
+    {
+      "inputs": [
+        {
+          "id": 257,
+          "src": "/media/previz/buffer00.png",
+          "ctype": "buffer",
+          "channel": 0,
+          "sampler": {
+            "filter": "linear",
+            "wrap": "clamp",
+            "vflip": "true",
+            "srgb": "false",
+            "internal": "byte"
+          },
+          "published": 1
+        },
+        {
+          "id": 258,
+          "src": "/media/previz/buffer01.png",
+          "ctype": "buffer",
+          "channel": 1,
+          "sampler": {
+            "filter": "linear",
+            "wrap": "clamp",
+            "vflip": "true",
+            "srgb": "false",
+            "internal": "byte"
+          },
+          "published": 1
+        }
+      ],
+      "outputs": [
+        {
+          "id": 257,
+          "channel": 0
+        }
+      ],
+      "code": "void mainImage( out vec4 fragColor, in vec2 fragCoord )\n{\n    vec2 uv = fragCoord/iResolution.xy;\n    vec4 c0 = texture(iChannel0, uv); //self\n    c0 += fract(iTime + uv.y) - 0.5;\n    vec4 c1 = texture(iChannel1, uv);\n    c1 += fract(iTime - uv.y) - 0.5;\n    fragColor = vec4(mix(c0.rgb, c1.rgb, step(0.25, uv.x)), 1.0);\n}",
+      "name": "Buffer A",
+      "description": "",
+      "type": "buffer"
+    },
+    {
+      "inputs": [
+        {
+          "id": 257,
+          "src": "/media/previz/buffer00.png",
+          "ctype": "buffer",
+          "channel": 0,
+          "sampler": {
+            "filter": "linear",
+            "wrap": "clamp",
+            "vflip": "true",
+            "srgb": "false",
+            "internal": "byte"
+          },
+          "published": 1
+        },
+        {
+          "id": 258,
+          "src": "/media/previz/buffer01.png",
+          "ctype": "buffer",
+          "channel": 1,
+          "sampler": {
+            "filter": "linear",
+            "wrap": "clamp",
+            "vflip": "true",
+            "srgb": "false",
+            "internal": "byte"
+          },
+          "published": 1
+        }
+      ],
+      "outputs": [
+        {
+          "id": 258,
+          "channel": 0
+        }
+      ],
+      "code": "void mainImage( out vec4 fragColor, in vec2 fragCoord )\n{\n    vec2 uv = fragCoord/iResolution.xy;\n    vec4 c0 = texture(iChannel0, uv); \n    c0 += fract(iTime + uv.y) - 0.5;\n    vec4 c1 = texture(iChannel1, uv); //self\n    c1 += fract(iTime - uv.y) - 0.5;\n    fragColor = vec4(mix(c0.rgb, c1.rgb, step(0.75, uv.x)), 1.0);\n}",
+      "name": "Buffer B",
+      "description": "",
+      "type": "buffer"
+    }
+  ]
+}

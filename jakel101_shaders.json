@@ -1,14 +1,163 @@
 {
   "userName": "jakel101",
-  "date": "2025-03-16T00:53:22.599091+00:00",
-  "numShaders": 46,
+  "date": "2025-03-29T23:01:09.777249+00:00",
+  "numShaders": 47,
   "shaders": [
+    {
+      "ver": "0.1",
+      "info": {
+        "id": "tXlGR7",
+        "date": "1742863063",
+        "viewed": 42,
+        "name": "buffer self reference test",
+        "username": "jakel101",
+        "description": "little illustration on how multiple buffer pass interact with one another and their render order. used for unit testing",
+        "likes": 0,
+        "published": 3,
+        "flags": 32,
+        "usePreview": 0,
+        "tags": [
+          "test",
+          "multipass"
+        ],
+        "hasliked": 0,
+        "retrieved": "2025-03-29T23:01:09.777249+00:00"
+      },
+      "renderpass": [
+        {
+          "inputs": [
+            {
+              "id": 257,
+              "src": "/media/previz/buffer00.png",
+              "ctype": "buffer",
+              "channel": 0,
+              "sampler": {
+                "filter": "linear",
+                "wrap": "clamp",
+                "vflip": "true",
+                "srgb": "false",
+                "internal": "byte"
+              },
+              "published": 1
+            },
+            {
+              "id": 258,
+              "src": "/media/previz/buffer01.png",
+              "ctype": "buffer",
+              "channel": 1,
+              "sampler": {
+                "filter": "linear",
+                "wrap": "clamp",
+                "vflip": "true",
+                "srgb": "false",
+                "internal": "byte"
+              },
+              "published": 1
+            }
+          ],
+          "outputs": [
+            {
+              "id": 37,
+              "channel": 0
+            }
+          ],
+          "code": "// Apache 2.0 not patents [*|*]\n\nvoid mainImage( out vec4 fragColor, in vec2 fragCoord )\n{\n    vec2 uv = fragCoord/iResolution.xy;\n    vec4 c0 = texture(iChannel0, uv);\n    vec4 c1 = texture(iChannel1, uv);\n    fragColor = vec4(mix(c0.rgb, c1.rgb, step(0.5, uv.x)), 1.0);\n}",
+          "name": "Image",
+          "description": "",
+          "type": "image"
+        },
+        {
+          "inputs": [
+            {
+              "id": 257,
+              "src": "/media/previz/buffer00.png",
+              "ctype": "buffer",
+              "channel": 0,
+              "sampler": {
+                "filter": "linear",
+                "wrap": "clamp",
+                "vflip": "true",
+                "srgb": "false",
+                "internal": "byte"
+              },
+              "published": 1
+            },
+            {
+              "id": 258,
+              "src": "/media/previz/buffer01.png",
+              "ctype": "buffer",
+              "channel": 1,
+              "sampler": {
+                "filter": "linear",
+                "wrap": "clamp",
+                "vflip": "true",
+                "srgb": "false",
+                "internal": "byte"
+              },
+              "published": 1
+            }
+          ],
+          "outputs": [
+            {
+              "id": 257,
+              "channel": 0
+            }
+          ],
+          "code": "void mainImage( out vec4 fragColor, in vec2 fragCoord )\n{\n    vec2 uv = fragCoord/iResolution.xy;\n    vec4 c0 = texture(iChannel0, uv); //self\n    c0 += fract(iTime + uv.y) - 0.5;\n    vec4 c1 = texture(iChannel1, uv);\n    c1 += fract(iTime - uv.y) - 0.5;\n    fragColor = vec4(mix(c0.rgb, c1.rgb, step(0.25, uv.x)), 1.0);\n}",
+          "name": "Buffer A",
+          "description": "",
+          "type": "buffer"
+        },
+        {
+          "inputs": [
+            {
+              "id": 257,
+              "src": "/media/previz/buffer00.png",
+              "ctype": "buffer",
+              "channel": 0,
+              "sampler": {
+                "filter": "linear",
+                "wrap": "clamp",
+                "vflip": "true",
+                "srgb": "false",
+                "internal": "byte"
+              },
+              "published": 1
+            },
+            {
+              "id": 258,
+              "src": "/media/previz/buffer01.png",
+              "ctype": "buffer",
+              "channel": 1,
+              "sampler": {
+                "filter": "linear",
+                "wrap": "clamp",
+                "vflip": "true",
+                "srgb": "false",
+                "internal": "byte"
+              },
+              "published": 1
+            }
+          ],
+          "outputs": [
+            {
+              "id": 258,
+              "channel": 0
+            }
+          ],
+          "code": "void mainImage( out vec4 fragColor, in vec2 fragCoord )\n{\n    vec2 uv = fragCoord/iResolution.xy;\n    vec4 c0 = texture(iChannel0, uv); \n    c0 += fract(iTime + uv.y) - 0.5;\n    vec4 c1 = texture(iChannel1, uv); //self\n    c1 += fract(iTime - uv.y) - 0.5;\n    fragColor = vec4(mix(c0.rgb, c1.rgb, step(0.75, uv.x)), 1.0);\n}",
+          "name": "Buffer B",
+          "description": "",
+          "type": "buffer"
+        }
+      ]
+    },
     {
       "ver": "0.1",
       "info": {
         "id": "M3VBWt",
         "date": "1738883384",
-        "viewed": 82,
+        "viewed": 97,
         "name": "orthographic heightmap (WIP)",
         "username": "jakel101",
         "description": "goal is to display some texture as a 3D heighmap. like an array of columns maybe?",
@@ -22,14 +171,14 @@
           "orthographic"
         ],
         "hasliked": 0,
-        "retrieved": "2025-03-16T00:53:22.599091+00:00"
+        "retrieved": "2025-03-29T23:01:09.777249+00:00"
       },
       "renderpass": [
         {
           "inputs": [
             {
-              "id": 14854,
-              "src": "/media/a/cb49c003b454385aa9975733aff4571c62182ccdda480aaba9a8d250014f00ec.png",
+              "id": 48,
+              "src": "/media/a/8979352a182bde7c3c651ba2b2f4e0615de819585cc37b7175bcefbca15a6683.jpg",
               "ctype": "texture",
               "channel": 0,
               "sampler": {
@@ -48,7 +197,7 @@
               "channel": 0
             }
           ],
-          "code": "// APache 2.0 no patents \\_%_/\n# define PI 3.141592653\n\nvec4 RayPlaneIntersection(vec3 ro, vec3 rd, vec3 norm, float b){\n    // rayOrigin, rayDirection, normal of the plane and bias distance along that normal.\n    // t < 0 means a miss? (kinda impossible in the orthographic setup)\n    // t returns the total distance to that plane\n    // can hit from either side!!!\n    rd = normalize(rd); //redundant!\n    float t = -1.0;\n    t = dot((norm*b)-ro,norm)/dot(rd,norm);\n    vec3 p = ro+rd*t;\n    return vec4(p,t);\n}\n\nvec2 cubeHit(vec3 ro, vec3 rd, float width, float height){\n    //TODO: return side (1=top, 2=left, 3=right) and distance to a cuube\n    // side=0 means miss?\n    \n    // idea: 3 planes and they intersect at the top near corner.\n    //we take the furtherst distance as our\n    // normals for these\n    vec3 top = vec3(0,0,1);\n    vec3 sx = vec3(1,0,0);\n    vec3 sy = vec3(0,1,0);    \n    //force rd+ro to be the nearest? (maybe using sign(rd))\n    vec4 top_h = RayPlaneIntersection(ro, rd, top, height);\n    vec4 sx_h = RayPlaneIntersection(ro, rd, sx, width);\n    vec4 sy_h = RayPlaneIntersection(ro, rd, sy, width);\n    // we shouldn't get any misses... maybe edge on or something?\n    \n    \n    // actually we need to test all 6 planes (or use abs?)\n    // and by the order of intersections we know which face hit or if it's a miss...\n    // will build a paper model to write down the matrix.\n    \n    float t = -1.0;\n    vec4 hit;\n    int side = 0;\n    //shitty argmax\n    if (top_h.w > t) {hit = top_h; side=1;} //redundant?\n    else if (sx_h.w > hit.w) {hit = sx_h; side=2;}\n    else if (sy_h.w > hit.w) {hit = sy_h; side=3;}\n    // now t is the furthest hit distance\n    t = hit.w;\n    // but it still could be a miss...?\n    if (hit.z == 1.0 || abs(hit.x-0.001) > width || abs(hit.y) > width) {side=0; t= -1.0;};    \n    \n    return vec2(side, t);\n}\n\n\nvec4 sampleTexture(vec3 p, ivec3 cells) {\n    // transforms the world space 3D to a texture location 2D and runs a texel fetch for that voxel\n    // maps this into the cube of -1..1, -1..1, 0..1?\n    //returns 0 otherwise\n    \n    // move p back into 0..1\n    p += 1.0;\n    p *= 0.5;\n    \n    // sampling coordinates by element multiplication. BE CAREFUL WIHT float() constructors -.-\n    ivec2 st = ivec2(floor(p.xy*vec2(cells.xy)));\n    // exit ouside the area\n    if (st.x < 0 || st.y < 0 || st.x >= cells.x || st.y >= cells.y) return vec4(0);\n    vec4 res = texelFetch(iChannel0, st, 0);\n    //return vec4(st, 0.0,0.0);\n    \n    return res;\n}\n\nivec2 worldToCell(vec3 p, ivec2 cells) {\n    // from the sampleTexture function above\n    \n    p += 1.0;\n    p *= 0.5;    \n    ivec2 st = ivec2(floor(p.xy*vec2(cells.xy)));\n    return st;\n}\n\nvec3 march (vec3 ro, vec3 rd, ivec2 cells){\n    // the idea is to march the ray to the next cell boundry.\n    // sample the texture and check height\n    // if the intersection ray is above the height, we missed this block\n    // if the intersection is below 0, we are outside the texture (return black)\n    // if the intersection is below the height, we hit the side (return some color?)\n    // issues: which side are we facing? (get this from rd?)    \n    \n    vec3 entry_point;\n    float t; //distance of current ray\n    // essentially which of the direcitons we are looking along x and y axis\n    vec2 dirs = sign(rd.xy) * -1.0;\n    vec3 d = ((1.0 * vec3(dirs, 1.0)) - ro) /rd; // distance to top, and near planes x/y\n    // if the distance to top is longest, we hit the other two front planes above the upper edge\n    if (d.z > d.x && d.z > d.y) {\n        t = d.z;\n        entry_point = ro + d.z*rd;        \n        // far miss? (we already know it's not hitting the front\n        if (abs(entry_point.x) > 1.0 || abs(entry_point.y) > 1.0) return vec3(0.1);        \n        //return vec3(0.2, 0.2, 1.0); // DEBUG: we enter the top\n    }\n    // if we hit the x plane before the y plane - we entry at the y plane\n    else if (d.x < d.y) {\n        t = d.y;\n        entry_point = ro + d.y*rd;\n        if (abs(entry_point.x) > 1.0) return vec3(0.2, 0.1, 0.1); // far miss on the side\n        //return vec3(0.2, 1.0, 0.2); // DEBUG: we enter the Y side\n    }\n    else {// we hit the y plane first and are entrying through the x plane\n        t = d.x;\n        entry_point = ro + d.x*rd;\n        if (abs(entry_point.y) > 1.0) return vec3(0.1, 0.2, 0.1); // far miss on the side\n        //return vec3(1.0, 0.2, 0.2); //DEBUG we enter the X side\n    }    \n    // TODO: the above is like a AABB, it can easily be simplified I suspect.\n    \n    \n    // near ground hit\n    //return entry_point;\n    if (entry_point.z < 0.0) return vec3(0.5);\n        \n    vec3 front_hit = entry_point; // initialize as 1 to not hit the top on the first plane\n    \n    float cell_size = 2.0/(float(cells.x)); // kinda constant?\n    \n    ivec2 current_cell = worldToCell(front_hit, cells.xy);\n    vec4 tex = texelFetch(iChannel0, current_cell, 0);\n    // return tex.rgb; // debug\n    // hit top, hit right, hit left, miss?\n    // distances to the rear planes .z can be ignored ?=?\n    vec3 rear_wall = vec3(front_hit.xy + cell_size*dirs, tex.z);\n    vec3 rear_d = (rear_wall - ro) /rd;\n    if (rear_d.x < rear_d.y) {// rear on the x plane got hit first\n        return vec3(tex);\n    }\n    return (rear_d);\n    \n    int x_plane; // we will for loop here\n    float plane_depth = 2.0/(float(cells.x)); // cells is the number of points in the -1 .. 1 domain?\n    for (x_plane = 0; x_plane <= cells.x; x_plane ++){\n        float plane_x = float(x_plane)*cell_size -1.0 ;\n        // test1: intersection with the x=1 plane\n        // ro + t*rd = h | - ro\n        // t*rd = h - ro | /rd\n        // t = (h - ro)/rd (all in vec3!)\n        float t = (plane_x - ro.x)/rd.x; // distance where the ray intersects plane\n        if (t < -1.0) return vec3(0); // hit is behind the camera -> black\n\n        // essentially the rear hit now.\n        vec3 h = ro + t * rd; // world space position of the hit/intersection\n        if (h.z < -0.0) return vec3(cos(h.z*10.0)*0.3); // below the plane -> near black\n        //if ((abs(h.x) > 1.1)) return vec3(0.3); // ouside the area\n\n        // sample height at current position\n        vec4 tex = sampleTexture(h, ivec3(cells, 0));\n        \n        if (front_hit.z < tex.z) return vec3(tex.r, 0.0, 0.0); // we have hit the side      \n        // the ray is \"above\" the front hit        \n        if (tex.z > h.z) return vec3(0.0, 0.0, tex.b); // we have hit the top        \n        // the ray is above this column\n        \n        // TODO: hit the other side?\n\n        // keep track of this hit as the front for the next iteration\n        front_hit = h;\n    }\n    \n    // todo: y plane?\n    // it could be a while loop where we check which planes we intersect\n    // and then decide where to go next based on the rear hit?\n    // (top down view)\n    // I guess there only ever are two intersections: front and rear\n    //  ---\n    // |   /\n    // |  /|   ->   x_plane +1 (or -1) because we hit the side\n    // | / |\n    //  /--\n    \n    \n    \n    return vec3(0.8);\n    \n}\n\nvoid mainImage( out vec4 fragColor, in vec2 fragCoord )\n{\n    // uv normalized to [-1..1] for height with more width\n    vec2 uv = (2.0*fragCoord - iResolution.xy)/iResolution.y;\n    vec2 mo = (2.0*iMouse.xy - iResolution.xy)/iResolution.y;\n    // orbiting camera setup\n    float azimuth = PI*mo.x;\n    float altitude = 0.5*PI*clamp(mo.y, -0.01, 1.0); // maybe just positive?\n    vec3 camera_pos = vec3(\n        cos(azimuth)*cos(altitude),\n        sin(azimuth)*cos(altitude),\n        sin(altitude));    \n    // the camera is always looking \"at\" the origin\n    vec3 look_dir = vec3(0.0, 0.0, -0.0) - camera_pos;\n    //camera_pos += look_dir * -1.0; // moving the camera \"back\" to avoid occlusions?\n    // two vectors orthogonal to this camera direction (tagents?)\n    vec3 look_u = camera_pos + vec3(-sin(azimuth), cos(azimuth), 0.0);\n    vec3 look_v = normalize(cross(camera_pos, look_u)); // is this faster?\n    //vec3 look_v = camera_pos + vec3(sin(altitude)*-cos(azimuth), sin(altitude)*-sin(azimuth), cos(altitude));    \n    // camera plane(origin of each pixel) -> barycentric?\n    vec3 camera_plane = camera_pos + (look_u*uv.x)*1.0 + (look_v*uv.y)*1.5; // wider fov = larger \"sensor\"\n\n    vec4 ground_plane = RayPlaneIntersection(camera_plane, look_dir, vec3(0,0,1),0.0);    \n    \n    vec3 col = vec3(step(0.0,uv),0.01);\n        \n    vec2 bbox = cubeHit(camera_plane, look_dir, 0.4, 0.1);        \n    col = sampleTexture(ground_plane.rgb, ivec3(64,32,0)).rgb;    \n    \n    //col.r = (bbox.x/4.0);\n    //col.b = (bbox.y);\n    \n    \n    col = march(camera_plane, look_dir, ivec2(8,8)); // use iChannelResolution[0]?\n    \n    fragColor = vec4(vec3(col),1.0);\n}",
+          "code": "// APache 2.0 no patents \\_%_/\n# define PI 3.141592653\n# define HEIGHT_SCALE 0.4\n\nivec2 worldToCell(vec3 p, ivec2 cells) {\n    // from the sampleTexture function above\n    \n    p += 1.0;\n    p *= 0.5;\n    ivec2 st = ivec2(floor(p.xy*vec2(cells.xy)));\n    // TODO: find an actual solution to the edge cases!\n    st = min(st, cells-1);\n    return st;\n}\n\nvec2 cellToWorld(ivec2 current_cell, ivec2 cells, vec2 dirs){\n    // gives the rear plane of a cell, based on dirs?\n    // TODO: can we avoid this magic epsilon number?\n    vec2 p = (vec2(current_cell)-min(vec2(0.0001),dirs)) / vec2(cells);\n    p *= 2.0;\n    p -= 1.0;\n    //p = min(p, vec2(1.0));\n    return p;\n    \n}\n\nvec4 sampleHeight(ivec2 cell){\n    // to allow for more complex math to determine height\n    // .rgb should just return the texture color or some modification of it\n    \n    vec4 tex = texelFetch(iChannel0, cell, 0);\n    vec4 res;\n    res.a = (tex.a + tex.r + tex.g)/3.0;\n    res.rgb = tex.rgb; // * res.a // to make it more of a \"height\" map?\n    res.a *= HEIGHT_SCALE; //TODO: global height scale?\n    return res;\n}\n\nvec3 sampleGround(vec3 ro, vec3 rd){\n    // for any ray that misses the heightmap\n    float ground_height = 0.0;\n    float ground_dist = (ground_height-ro.z)/rd.z;\n    vec3 ground_hit = ro + rd * ground_dist;\n    \n    vec3 col = vec3(fract(ground_hit.xy), ground_dist);\n    \n    col.rgb *= 0.2;\n    return col;\n}\n\nvec3 march (vec3 ro, vec3 rd, ivec2 cells){\n    // the idea is to march the ray to the next cell boundry.\n    // sample the texture and check height\n    // if the intersection ray is above the height, we missed this block\n    // if the intersection is below 0, we are outside the texture (return black)\n    // if the intersection is below the height, we hit the side (return some color?)\n    // issues: which side are we facing? (get this from rd?)    \n    \n    vec3 entry_point;\n    float t; //distance of current ray\n    // essentially which of the direcitons we are looking along x and y axis\n    vec2 dirs = sign(rd.xy) * -1.0;\n    if (dirs.x == 0.0 || dirs.y == 0.0) (dirs = vec2(1)); // avoid 0.0\n    vec3 d = ((1.0 * vec3(dirs, 1.0)) - ro) /rd; // distance to top, and near planes x/y\n    // if the distance to top is longest, we hit the other two front planes above the upper edge\n    if (d.z > d.x && d.z > d.y) {\n        t = d.z;\n        entry_point = ro + d.z*rd;        \n        // make sure this is grid alinged! (stair step function?\n        //entry_point.xy = floor(vec2(0.5) + entry_point.xy*vec2(cells.xy)*0.5)/(vec2(cells.xy)*0.5);\n        \n        // far miss? (we already know it's not hitting the front\n        if (abs(entry_point.x) > 1.0 || abs(entry_point.y) > 1.0) return sampleGround(ro, rd); vec3(0.1);\n        //return vec3(0.2, 0.2, 1.0); // DEBUG: we enter the top   \n        //return (entry_point);        \n    }\n    // if we hit the x plane before the y plane - we entry at the y plane\n    else if (d.x < d.y) {\n        t = d.y;\n        entry_point = ro + d.y*rd;\n        if (abs(entry_point.x) > 1.0) return sampleGround(ro, rd); //vec3(0.2, 0.1, 0.1); // far miss on the side\n        //return vec3(0.2, 1.0, 0.2); // DEBUG: we enter the Y side\n    }\n    else {// we hit the y plane first and are entrying through the x plane\n        t = d.x;\n        entry_point = ro + d.x*rd;\n        if (abs(entry_point.y) > 1.0) return sampleGround(ro, rd); //vec3(0.1, 0.2, 0.1); // far miss on the side\n        //return vec3(1.0, 0.2, 0.2); //DEBUG we enter the X side\n    }    \n    // TODO: the above is like a AABB, it can easily be simplified I suspect.\n    \n    \n    // near ground hit\n    //return entry_point;\n    if (entry_point.z < 0.0) return sampleGround(ro, rd); //vec3(0.5);\n    \n    //return entry_point;\n    vec3 front_hit = entry_point; // initialize as 1 to not hit the top on the first plane\n    \n    float l = 0.15; // light for the side angle\n    // new loop develops here  - what is the reasonable max?\n    for (int i = 0; i<max(cells.x, cells.y)*2; i++){\n        ivec2 current_cell = worldToCell(front_hit, cells.xy);\n        \n        // rear miss -> end reached?\n        if (min(front_hit.x, front_hit.y) < -1.0) return sampleGround(ro, rd); //vec3(0.05*float(i)); // miss neg\n        if (max(front_hit.x, front_hit.y) > 1.0) return sampleGround(ro, rd); //vec3(0.1*float(i));// miss pos\n        \n        vec4 tex = sampleHeight(current_cell);\n        // return tex.rgb; // debug\n        \n        // hit top, hit right, hit left, miss?\n        // distances to the rear planes .z can be ignored ?=?        \n        // where we actually march to the \"next\" far - wall.\n        \n        vec2 far_walls = cellToWorld(current_cell, cells, dirs);\n        // exit if we are the far wall, likely means we hit the end!\n        if (far_walls.x == front_hit.x || far_walls.y == front_hit.y) return sampleGround(ro, rd);\n        \n        \n        // distance to next far walls\n        vec3 rear_d = (vec3(far_walls.xy, tex.a) - ro)/rd;\n        //return abs(vec3((rear_d.xyz))*0.5);\n        \n        // the min distance is the nearest wall, we step until there!\n        vec3 rear_hit = ro + rd*min(rear_d.x, rear_d.y); //t;        \n        // return rear_hit;\n        // hit side?\n        if (front_hit.z < tex.a) return (tex.rgb - l * tex.a);\n        // hit top?\n        if (tex.a > rear_hit.z) return vec3(tex.rgb);\n        \n        if (front_hit == rear_hit) {\n        // if we didn't actually advance, we should nudge here and hope for the best!\n            rear_hit += rd*0.0001;\n        }\n        front_hit = rear_hit; // keep track for the next iteration\n        //return vec3(0.01);\n    }\n    //return sampleGround(ro, rd); // but we shouldn't get here!\n    return vec3(0.8); // percision issues where we ended the loop -.-\n    \n    \n}\n\n//TODO: sun angle and showdow casting (from the hit towards the sun...)?\n\nvoid mainImage( out vec4 fragColor, in vec2 fragCoord )\n{\n    // uv normalized to [-1..1] for height with more width\n    vec2 uv = (2.0*fragCoord - iResolution.xy)/iResolution.y;\n    vec2 mo = (2.0*iMouse.xy - iResolution.xy)/iResolution.y;\n    \n    // for when it's just idling...   \n    float azimuth = iTime*0.15 + mo.x;\n    float altitude = 0.7+cos(iTime*0.4)*0.15;      \n    if (sign(iMouse.z) > 0.0){\n        // orbiting camera setup\n        azimuth = PI*mo.x;\n        altitude = 0.5*PI*clamp(mo.y+1.0, -0.01, 0.99); // maybe just positive?\n    }\n    \n    // make sure you don't look \"below\"\n    altitude = clamp(altitude, HEIGHT_SCALE, PI);\n    \n    vec3 camera_pos = vec3(\n        cos(azimuth)*cos(altitude),\n        sin(azimuth)*cos(altitude),\n        sin(altitude));    \n    // the camera is always looking \"at\" the origin\n    vec3 look_dir = vec3(0.0, 0.0, HEIGHT_SCALE*0.5) - camera_pos;\n    \n    //camera_pos += look_dir * -5.0; // moving the camera \"back\" to avoid occlusions?\n    // two vectors orthogonal to this camera direction (tagents?)    \n    //vec3 look_u = camera_pos + vec3(-sin(azimuth), cos(azimuth), 0.0);\n    //vec3 look_v = camera_pos + vec3(sin(altitude)*-cos(azimuth), sin(altitude)*-sin(azimuth), cos(altitude));    \n    \n    // turns out analytically these aren't correct. so using cross instead -.-\n    vec3 look_u = normalize(cross(vec3(0.0, 0.0, -1.0), look_dir));\n    vec3 look_v = normalize(cross(camera_pos, look_u)); // is this faster?\n    // camera plane(origin of each pixel) -> barycentric?\n    \n    // orthographic zoom just makes the sensor smaller\n    float zoom = clamp(1.0 + cos(iTime*0.3), 0.05, 1.5);\n    vec3 camera_plane = camera_pos + (look_u*uv.x)*zoom + (look_v*uv.y)*zoom; // wider fov = larger \"sensor\"    \n        \n    vec3 col = march(camera_plane, look_dir, ivec2(1024, 1024)); // use iChannelResolution[0]?\n    \n    fragColor = vec4(vec3(col),1.0);\n}",
           "name": "Image",
           "description": "",
           "type": "image"
@@ -60,7 +209,7 @@
       "info": {
         "id": "X3KyRd",
         "date": "1737245413",
-        "viewed": 57,
+        "viewed": 60,
         "name": "Orthographic path tracing? ",
         "username": "jakel101",
         "description": "trying to figure out how this would work (without looking it up)\n\nneeded for this unreleased one: https://www.shadertoy.com/view/lXycDz",
@@ -73,7 +222,7 @@
           "orthographic"
         ],
         "hasliked": 0,
-        "retrieved": "2025-03-16T00:53:22.599091+00:00"
+        "retrieved": "2025-03-29T23:01:09.777249+00:00"
       },
       "renderpass": [
         {
@@ -96,7 +245,7 @@
       "info": {
         "id": "lXyyzR",
         "date": "1735848777",
-        "viewed": 92,
+        "viewed": 96,
         "name": "Persistent Music Visualizer",
         "username": "jakel101",
         "description": "to have some of the element be reactive over time, the persistence is done over time in a Buffer.\nChange the Music in Buffer A Channel1\nChange channel0 to be sampled nearest instead of linear\ndeveloped on 165 Hz, might look worse on 60!",
@@ -110,7 +259,7 @@
           "infinity"
         ],
         "hasliked": 0,
-        "retrieved": "2025-03-16T00:53:22.599091+00:00"
+        "retrieved": "2025-03-29T23:01:09.777249+00:00"
       },
       "renderpass": [
         {
