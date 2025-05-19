@@ -32,7 +32,7 @@ vec2 cellToWorld(ivec2 current_cell, ivec2 cells, vec2 dirs){
 vec4 sampleHeight(ivec2 cell){
     // to allow for more complex math to determine height
     // .rgb should just return the texture color or some modification of it
-    
+    //cell.x = (cell.x + iFrame) % int(iChannelResolution[0].x); // fun texture scroll
     vec4 tex = texelFetch(iChannel0, cell, 0);
     vec4 res;
     res.a = (tex.a + tex.r + tex.g)/3.0;
@@ -94,7 +94,8 @@ float shadow(vec3 ro, vec3 rd, ivec2 cells){
         
         //TODO: the side hit on the first seems to be wrong height...
         // side hit -> full shadow
-        if (tex.a > hit.z && i>=1) return float(0.2);
+        // fake penumbra: scaled by distance
+        if (tex.a > hit.z && i>=1) return 0.3-length(hit-ro);
         //if (i >= 5) return tex.aaa;
         
         // top hit -> looking at sun

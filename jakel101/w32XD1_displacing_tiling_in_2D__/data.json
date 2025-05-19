@@ -1,0 +1,35 @@
+{
+  "ver": "0.1",
+  "info": {
+    "id": "w32XD1",
+    "date": "1746067136",
+    "viewed": 48,
+    "name": "displacing tiling in 2D??",
+    "username": "jakel101",
+    "description": "WIP where you distort the tile UV (and later ID) so they are no longer squares",
+    "likes": 0,
+    "published": 3,
+    "flags": 0,
+    "usePreview": 0,
+    "tags": [
+      "tiling"
+    ],
+    "hasliked": 0,
+    "retrieved": "2025-05-19T01:18:02.782621+00:00"
+  },
+  "renderpass": [
+    {
+      "inputs": [],
+      "outputs": [
+        {
+          "id": 37,
+          "channel": 0
+        }
+      ],
+      "code": "#define PI 3.14192\n\n\nvoid mainImage( out vec4 fragColor, in vec2 fragCoord )\n{\n    vec2 uv = fragCoord/iResolution.xy;\n    uv *= 3.0;\n    uv.x += asin(fract(uv.y-0.5)+0.5)*(1.0/PI);\n    \n    // TODO: uv per shape, not per square.\n    // +vec2(0.0, smoothstep(0.0, 1.0, fract(uv.x))))\n    vec2 cellUV = fract(uv);\n    vec2 cellID = floor(uv);\n    \n    // checkerboard trick\n    float check = clamp(0.0, 1.0, \n        (mod(cellID.y, 2.0) + mod(cellID.x, 2.0))) \n     - ((mod(cellID.y, 2.0) * mod(cellID.x, 2.0)));\n    \n    vec3 col = vec3(cellUV, 0.0);//, check);\n    fragColor = vec4(col,1.0);\n}",
+      "name": "Image",
+      "description": "",
+      "type": "image"
+    }
+  ]
+}

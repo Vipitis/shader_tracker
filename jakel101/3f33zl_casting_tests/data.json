@@ -1,0 +1,35 @@
+{
+  "ver": "0.1",
+  "info": {
+    "id": "3f33zl",
+    "date": "1747344200",
+    "viewed": 42,
+    "name": "casting tests",
+    "username": "jakel101",
+    "description": "testing how color values get cast into 8unorm",
+    "likes": 0,
+    "published": 3,
+    "flags": 0,
+    "usePreview": 0,
+    "tags": [
+      "test"
+    ],
+    "hasliked": 0,
+    "retrieved": "2025-05-19T01:18:02.782621+00:00"
+  },
+  "renderpass": [
+    {
+      "inputs": [],
+      "outputs": [
+        {
+          "id": 37,
+          "channel": 0
+        }
+      ],
+      "code": "void mainImage( out vec4 fragColor, in vec2 fragCoord )\n{\n    vec2 uv = fragCoord/iResolution.xy;\n    \n    if (uv.y > 0.5) (uv.x-=0.5);\n    \n    \n    vec3 col;\n    \n    col.r = uv.x;\n    col.g = (float(int(uv.x*255.0+0.5)))/255.0;   \n    col.b = (float(trunc(uv.x*255.0+0.5)))/255.0;    \n    \n    fragColor = vec4(col,1.0);\n}",
+      "name": "Image",
+      "description": "",
+      "type": "image"
+    }
+  ]
+}

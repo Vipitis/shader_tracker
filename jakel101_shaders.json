@@ -1,14 +1,137 @@
 {
   "userName": "jakel101",
-  "date": "2025-04-07T00:22:10.977114+00:00",
-  "numShaders": 47,
+  "date": "2025-05-19T01:18:02.782621+00:00",
+  "numShaders": 50,
   "shaders": [
+    {
+      "ver": "0.1",
+      "info": {
+        "id": "wc33WX",
+        "date": "1747616947",
+        "viewed": 3,
+        "name": "Random Beat every min - 87 years",
+        "username": "jakel101",
+        "description": "Discussed this idea on Discord the other night, decided to sit down and implement it. Needs better instruments still!\ncan get out of sync after ~1 min, so just reload/recompile and you get something new.",
+        "likes": 1,
+        "published": 3,
+        "flags": 8,
+        "usePreview": 0,
+        "tags": [
+          "random",
+          "audio",
+          "drums"
+        ],
+        "hasliked": 0,
+        "retrieved": "2025-05-19T01:18:02.782621+00:00"
+      },
+      "renderpass": [
+        {
+          "inputs": [],
+          "outputs": [
+            {
+              "id": 37,
+              "channel": 0
+            }
+          ],
+          "code": "// Apache 2.0 no patents =_=\n\n/*\n* \n* Image pass holds the visualization, it's might get out of sync with the music for now :/\n* Common pass holds the generation logic\n* Sound pass plays the instruments for 3 minutes.\n* recompile to get new patterns!\n* this should only repeat every ~ 87 years so enjoy some unique patterns!\n*/\n\n# define LINE 0.005\n// TODO: better pixel width\n\n// informed by: https://youtu.be/PMltMdi1Wzg\nfloat sdLineSegment(vec2 p, vec2 a, vec2 b) {\n    // pos, start, end;\n    float d;    \n    // how far along we are between the points.    \n    float h = clamp(dot(p-a, b-a)/(length(b-a)*length(b-a)), 0.0, 1.0);\n    // point along the line between the two points\n    vec2 q = mix(a, b, h);    \n    //d = min(length(p-a),length(p-b)); // this actually doesn't matter anymore\n    d = length(p-q); // debug, show point in between...\n    return d;\n}\n\n// axis aligned box with center offset\nfloat dBox(vec2 p, vec2 c, float h, float w){\n    vec2 s = (p-c); // shift the center\n    \n    float d = length(max(abs(s) - vec2(h/2.0,w/2.0), 0.0));\n    \n    return d;\n}\n\n\n// helper functio to draw the blank lines/their mask\nfloat blank(vec2 p) {\n    // from, x:-0.85 to 0.85 (so 16 notes fit in nicely)\n    // lines at y: -0.2, 0.1, 0.0, 0.1, 0.2\n    // big lines at either end\n    float mask = 0.0;    \n    float width = 0.85;\n    float vert_space = 0.1;\n    \n    // five horizontal lines\n    int i;    \n    for (i=-2; i<=2; i++){\n        float height = vert_space*float(i);\n        float l = sdLineSegment(p, vec2(width, height), vec2(-width, height));\n        mask += smoothstep(LINE, 0.0, l);\n    }\n    \n    // maybe use rectanle instead?\n    float left = dBox(p, vec2(-width, 0.0), 0.01, vert_space*4.0);\n    float right = dBox(p, vec2(width, 0.0), 0.01, vert_space*4.0);\n    mask += smoothstep(LINE, 0.0, left);\n    mask += smoothstep(LINE, 0.0, right);\n    \n    return mask; //step(0.5, mask); // step to make it more solid (really whacky)\n}\n\n\n// helper function to the top of the beamed notes\nfloat beams(vec2 p) {\n    // should be double beamed 1/16th?\n    // from like -0.8 to -0.5; -0.4 to 0.0; ...?\n    float mask;\n    float height = 0.4;\n    int i;\n    for (i=0; i<4; i++){\n        float start = -0.71 + float(i)*0.4;\n        float l1 = dBox(p, vec2(start + 0.15, height + 0.05), 0.3, 0.03); \n        float l2 = dBox(p, vec2(start + 0.15, height), 0.3, 0.015); \n        mask += smoothstep(LINE, 0.0, l1);\n        mask += smoothstep(LINE, 0.0, l2);\n    }    \n    \n    return mask;    \n}\n\n// draw notes (masks)\nfloat note(vec2 p, int time, uint type) {\n    // type: 0 - kick, 1 - snare, 2 - hi hat\n    // kick between 1 and 2 (height -0.3)\n    // snare is between 3 and 4 (height 0.1)\n    // hi hat is a ghost note (X) above 5 (height 0.5)\n    // time is 0..16 at 0.1 intervals        \n    float mask;\n    float size = 0.04;\n    float x = -0.75 + float(time)*0.1;\n    float y = -0.15 + float(type)*0.2; // height\n    \n    \n    float dist_note;\n    float stem_bot = y;\n    if (type > 1u){\n        // hh ghostnote!\n        float l1 = sdLineSegment(p, vec2(x+size,y+size), vec2(x-size,y-size));        \n        float l2 = sdLineSegment(p, vec2(x+size,y-size), vec2(x-size,y+size));       \n        dist_note = min(l1, l2);\n        stem_bot += size;\n    } \n    else {\n        // TODO: little twist!\n        dist_note = length(p-vec2(x,y)) - size;\n    }\n    float stem_dist = sdLineSegment(p, vec2(x+size, stem_bot), vec2(x+size, 0.45));\n    \n    mask += smoothstep(LINE, 0.0, min(dist_note, stem_dist));\n    //mask += smoothstep(LINE, 0.0, stem_dist);\n    return mask;\n    \n}\n\n// mask again...\nfloat notes(vec2 p, uint beat){\n    int i;\n    float mask;\n    for (i=0; i<16; i++){\n        uint type = beat & 3u; // select lowest two bits\n        type = min(type, 2u); // this shouldn't exist anyway.\n        beat = beat >> 2; // shift to bits out for next step\n        float note_mask = note(p, i, type);\n        mask += note_mask;\n    }\n    return mask;\n}\n\n\n// vizualize the BPM?\nfloat indicator(vec2 p){\n    float mask;\n    float beat_time = mod(iTime, (60.0*4.0/BPM))/(60.0*4.0/BPM); // for test\n    \n    vec2 pos = vec2(-0.75 + beat_time*(2.0*0.75), -0.5);\n    \n    float d = length(p-pos);\n    mask = smoothstep(0.1, 0.0, d);\n    return mask;\n}\n\nvoid mainImage( out vec4 fragColor, in vec2 fragCoord )\n{\n    uint beat = beat_hash();\n    vec2 uv = fragCoord/iResolution.xy;    \n    uv -= vec2(0.5);\n    uv *= 2.0;\n    \n    float line_dist = sdLineSegment(uv, vec2(0.85, 0.3), vec2(-0.85, 0.3));\n\n    vec3 col = vec3(0.95, 0.98, 0.90);\n    \n    float bg_lines = blank(uv);\n    float tops = beams(uv);\n    float notes_mask = notes(uv, beat);\n    float indicator_mask = indicator(uv);\n    col = mix(col, vec3(0.01), bg_lines);\n    col = mix(col, vec3(0.02), tops);\n    col = mix(col, vec3(0.03), notes_mask);    \n    col = mix(col, vec3(0.85, 0.23, 0.02), indicator_mask);\n    fragColor = vec4(col,1.0);\n}",
+          "name": "Image",
+          "description": "",
+          "type": "image"
+        },
+        {
+          "inputs": [],
+          "outputs": [],
+          "code": "# define LIFE 6\n// linetime of 2^n seconds per beat. Meant to be 6, but 0 or 1 can be used for testing\n\n# define BPM 75.0\n// change, recompile, play and then rewind!\n\n\n// TODO: does this hash every repeat? I am not sure\n// via https://www.shadertoy.com/view/XlGcRh\n// https://www.pcg-random.org/\nuint pcg(uint v)\n{\n\tuint state = v * 747796405u + 2891336453u;\n\tuint word = ((state >> ((state >> 28u) + 4u)) ^ state) * 277803737u;\n\treturn (word >> 22u) ^ word;\n}\n\n//TODO this is not at all accurate, but good enough for the demo\nuint unixTime(){\n    // deconstruct iDate back into a 32 bit unix timestamp:\n    // iDate.x = years\n    // iDate.y = months\n    // iDate.z = days\n    // iDate.w = seconds (including fractionals)\n    // TODO month/day is off by one?\n    uint time;\n    \n    uvec4 date = uvec4(iDate);\n    date.x -= 1970u; // offset since Unix epoch!\n    \n    // lazy addition for now to get a value.\n    // TODO: improve values.\n    time += uint(365.24 * float(date.x )) * 24u * 60u * 60u;\n    time += 30u*date.y * 24u * 60u * 60u;\n    time += date.z * 24u * 60u * 60u;\n    time += date.w;\n    \n    // On the Image pass we subtract the current runtime to get the time during compilation\n    // this is meant to match the Sound pass compilation varaint in the future.\n    //time -= uint(iTime); // can be out of sync -.-\n    return time;\n\n}\n\n// 32 bit value interpreted at trinary by reading 2 bits with max(2)\n// this should hash\nuint beat_hash(){\n    uint beat;\n    \n    // placeholder\n    beat = unixTime();\n    // to cause variations about every ~1 minute, we ignore the lowest 6 bits\n    // our target space is 3^16 which needs less than 26 bits.\n    uint seed = beat >> LIFE; // 6 bits to only change every 64 seconds, reduced for testing\n    uint max_val = 43046720u; //3^16 -1\n    seed = pcg(seed);\n    //seed = seed%max_val; // so it rolls over?\n    \n    \n    \n    // convert to (binary-encoded) trineary representation:        \n    int i;\n    uint val = seed; // this is too imprecise? we lose precision\n    for (i=0; i<16; i++){\n        uint tri = val%3u;\n        val = val/3u; // move to quotient for the next part\n        // fill two bits at a time\n        beat = beat << 2u;\n        beat += uint(tri);//uint(tri);  \n    }    \n    return beat;\n}\n",
+          "name": "Common",
+          "description": "",
+          "type": "common"
+        },
+        {
+          "inputs": [],
+          "outputs": [],
+          "code": "# define TAU 6.2831\n\n/* \n* I welcome any improvements to the instruments:\n* the envelope is awfully cutoff\n* better drum machines exist on Shadertoy alreay\n* there is a progressively growing undertone, maybe it can be corrected\n*/\n\n//  TODO easier attach/pluck\nfloat envelope(float t, float target_t) {\n    // this is a bad idea to cutoff the attack!!\n    if (t < target_t + 0.025) return 0.0;\n    \n    // shifts the wave to the target place\n    float t2 = t-target_t+0.05;\n    \n    return max(0.0, 5.0*t2*exp(-20.0*(t2-0.09)));\n}\n\n// TODO: better instruments\nfloat kick(float t, float env) {    \n    return sin(TAU*180.0*t)*env;\n}\n\nfloat snare(float t, float env) {\n    return sin(TAU*341.0*t)*env;\n}\n\nfloat hihat(float t, float env) {\n    return sin(TAU*830.0*t)*env;\n}\n\n// returns the instrument[0,1,2] type per measure\nint player(int measure, uint beat){\n    // read exactly the two bits in the 32-bit uint for this measure\n    uint type = (beat >> 2*measure) & 3u;\n    return int(type);\n}\n\n\nvec2 mainSound( int samp, float time )\n{\n    // there probably needs to be an additional time so the cutoff isn't this random!\n    float beat_time = mod(time, (60.0*4.0/BPM))/(60.0*4.0/BPM);\n    uint beat = beat_hash();\n    \n    float signal;\n    \n    int i;\n    for (i=0; i<16; i++){\n        int type = player(i, beat);\n        float env = envelope(beat_time, float(i)/16.0);\n        float sound;\n        if (type == 0) {\n        // TODO: we could add all envs first and then call the instrument once instead\n            sound = kick(time, env);\n        }\n        else if (type == 1) {\n            sound = snare(time, env);\n        }\n        else if (type == 2) {\n            sound = hihat(time, env);\n        }        \n        signal += sound; \n    }\n    \n    // lots of fun with streo left over here.\n    return vec2(signal);\n}",
+          "name": "Sound",
+          "description": "",
+          "type": "sound"
+        }
+      ]
+    },
+    {
+      "ver": "0.1",
+      "info": {
+        "id": "3f33zl",
+        "date": "1747344200",
+        "viewed": 42,
+        "name": "casting tests",
+        "username": "jakel101",
+        "description": "testing how color values get cast into 8unorm",
+        "likes": 0,
+        "published": 3,
+        "flags": 0,
+        "usePreview": 0,
+        "tags": [
+          "test"
+        ],
+        "hasliked": 0,
+        "retrieved": "2025-05-19T01:18:02.782621+00:00"
+      },
+      "renderpass": [
+        {
+          "inputs": [],
+          "outputs": [
+            {
+              "id": 37,
+              "channel": 0
+            }
+          ],
+          "code": "void mainImage( out vec4 fragColor, in vec2 fragCoord )\n{\n    vec2 uv = fragCoord/iResolution.xy;\n    \n    if (uv.y > 0.5) (uv.x-=0.5);\n    \n    \n    vec3 col;\n    \n    col.r = uv.x;\n    col.g = (float(int(uv.x*255.0+0.5)))/255.0;   \n    col.b = (float(trunc(uv.x*255.0+0.5)))/255.0;    \n    \n    fragColor = vec4(col,1.0);\n}",
+          "name": "Image",
+          "description": "",
+          "type": "image"
+        }
+      ]
+    },
+    {
+      "ver": "0.1",
+      "info": {
+        "id": "w32XD1",
+        "date": "1746067136",
+        "viewed": 48,
+        "name": "displacing tiling in 2D??",
+        "username": "jakel101",
+        "description": "WIP where you distort the tile UV (and later ID) so they are no longer squares",
+        "likes": 0,
+        "published": 3,
+        "flags": 0,
+        "usePreview": 0,
+        "tags": [
+          "tiling"
+        ],
+        "hasliked": 0,
+        "retrieved": "2025-05-19T01:18:02.782621+00:00"
+      },
+      "renderpass": [
+        {
+          "inputs": [],
+          "outputs": [
+            {
+              "id": 37,
+              "channel": 0
+            }
+          ],
+          "code": "#define PI 3.14192\n\n\nvoid mainImage( out vec4 fragColor, in vec2 fragCoord )\n{\n    vec2 uv = fragCoord/iResolution.xy;\n    uv *= 3.0;\n    uv.x += asin(fract(uv.y-0.5)+0.5)*(1.0/PI);\n    \n    // TODO: uv per shape, not per square.\n    // +vec2(0.0, smoothstep(0.0, 1.0, fract(uv.x))))\n    vec2 cellUV = fract(uv);\n    vec2 cellID = floor(uv);\n    \n    // checkerboard trick\n    float check = clamp(0.0, 1.0, \n        (mod(cellID.y, 2.0) + mod(cellID.x, 2.0))) \n     - ((mod(cellID.y, 2.0) * mod(cellID.x, 2.0)));\n    \n    vec3 col = vec3(cellUV, 0.0);//, check);\n    fragColor = vec4(col,1.0);\n}",
+          "name": "Image",
+          "description": "",
+          "type": "image"
+        }
+      ]
+    },
     {
       "ver": "0.1",
       "info": {
         "id": "tXlGR7",
         "date": "1742863063",
-        "viewed": 53,
+        "viewed": 74,
         "name": "buffer self reference test",
         "username": "jakel101",
         "description": "little illustration on how multiple buffer pass interact with one another and their render order. used for unit testing",
@@ -21,7 +144,7 @@
           "multipass"
         ],
         "hasliked": 0,
-        "retrieved": "2025-04-07T00:22:10.977114+00:00"
+        "retrieved": "2025-05-19T01:18:02.782621+00:00"
       },
       "renderpass": [
         {
@@ -157,11 +280,11 @@
       "info": {
         "id": "M3VBWt",
         "date": "1738883384",
-        "viewed": 127,
+        "viewed": 157,
         "name": "orthographic heightmap (WIP)",
         "username": "jakel101",
         "description": "goal is to display some texture as a 3D heighmap. like an array of columns maybe?",
-        "likes": 3,
+        "likes": 4,
         "published": 3,
         "flags": 0,
         "usePreview": 0,
@@ -171,7 +294,7 @@
           "orthographic"
         ],
         "hasliked": 0,
-        "retrieved": "2025-04-07T00:22:10.977114+00:00"
+        "retrieved": "2025-05-19T01:18:02.782621+00:00"
       },
       "renderpass": [
         {
@@ -197,7 +320,7 @@
               "channel": 0
             }
           ],
-          "code": "// APache 2.0 no patents \\_%_/\n# define PI 3.141592653\n# define HEIGHT_SCALE 0.4\n\nivec2 worldToCell(vec3 p, ivec2 cells) {\n    // from the sampleTexture function above\n    \n    p += 1.0;\n    p *= 0.5;\n    ivec2 st = ivec2((p.xy*vec2(cells.xy)));\n    // TODO: find an actual solution to the edge cases!\n    st = min(st, cells -1);\n    return st;\n}\n\nvec2 cellToWorld(ivec2 current_cell, ivec2 cells, vec2 dirs){\n    // gives the rear plane of a cell, based on dirs?\n    // TODO: can we avoid this magic epsilon number?\n    // \n    vec2 p = vec2(current_cell);    \n    p -= min(vec2(0.0),dirs); // the \"step\"?\n    \n    // scale and shift    \n    p /= vec2(cells);    \n    p *= 2.0;\n    p -= 1.0;\n    //p = min(p, vec2(1.0));\n    return p;\n    \n}\n\nvec4 sampleHeight(ivec2 cell){\n    // to allow for more complex math to determine height\n    // .rgb should just return the texture color or some modification of it\n    \n    vec4 tex = texelFetch(iChannel0, cell, 0);\n    vec4 res;\n    res.a = (tex.a + tex.r + tex.g)/3.0;\n    res.rgb = tex.rgb; // * res.a // to make it more of a \"height\" map?\n    //res.rgb = vec3(0.5);\n    res.a *= HEIGHT_SCALE; //TODO: global height scale?\n    return res;\n}\n\nvec3 sampleGround(vec3 ro, vec3 rd){\n    // for any ray that misses the heightmap\n    float ground_height = 0.0;\n    float ground_dist = (ground_height-ro.z)/rd.z;\n    vec3 ground_hit = ro + rd * ground_dist;\n    \n    vec3 col = vec3(fract(ground_hit.xy), ground_dist);\n    \n    // temporary test\n    vec3 sun_angle = normalize(vec3(0.8, 0.7, 0.5));\n    // simple cast to a plane at x=1 (for now)\n    vec3 sun_dist = (vec3(sign(sun_angle.xy)*-1.0, 1.0)-ground_hit)/sun_angle;\n    float closest = max(sun_dist.x, sun_dist.y);\n    vec3 edge_intersect = ground_hit + sun_angle * closest;\n    float shadow = .8;\n    float edge_height = sampleHeight(worldToCell(edge_intersect, ivec2(iChannelResolution[0].xy))).a;\n    if (edge_intersect.z < edge_height && abs(max(edge_intersect.x, edge_intersect.y)) < 1.0) {\n        shadow = 0.2;\n    }\n    // if this is negative we missed the whole block\n    if (closest < 0.0) shadow = 0.8;\n    \n    col.rgb *= shadow;\n    return col;\n}\n\nfloat shadow(vec3 ro, vec3 rd, ivec2 cells){\n    // return the amount of shadowed?\n    // we are now marching upwards from some hit\n    // ro is essentially the point we started from\n    // rd is the sun angle        \n    \n    vec2 dirs = sign(rd.xy) * -1.0;\n    if (dirs.x == 0.0 || dirs.y == 0.0) (dirs = vec2(1)); // avoid 0.0\n    \n    vec3 hit = ro;\n    int i;\n    for(i=0; i <(cells.x+cells.y)*2; i++){\n        if (min(hit.x, hit.y) < -1.0) return float(0.0);\n        if (max(hit.x, hit.y) > 1.0) return float(0.0);\n        ivec2 current_cell = worldToCell(hit, cells);          \n        \n        \n        vec3 rear_walls = vec3(cellToWorld(current_cell, cells, dirs), 1.0); \n        \n        vec4 tex = sampleHeight(current_cell);\n        \n        vec3 far_dist = (rear_walls-hit)/rd;\n        \n        \n        //TODO: the side hit on the first seems to be wrong height...\n        // side hit -> full shadow\n        if (tex.a > hit.z && i>=1) return float(0.2);\n        //if (i >= 5) return tex.aaa;\n        \n        // top hit -> looking at sun\n        if (far_dist.z < max(far_dist.x, far_dist.y)) return float(0.0);\n        // now side hit or miss\n        \n        //advance the ray to closest edge\n        vec3 next_hit = hit + rd*min(far_dist.x, far_dist.y);\n        if (hit == next_hit) {\n            next_hit = hit + rd*0.001;\n        }                \n        hit = next_hit;\n    }    \n    // don't know yet...\n    return float(0.9);\n\n}\n\n\nvec3 march (vec3 ro, vec3 rd, ivec2 cells){\n    // the idea is to march the ray to the next cell boundry.\n    // sample the texture and check height\n    // if the intersection ray is above the height, we missed this block\n    // if the intersection is below 0, we are outside the texture (return black)\n    // if the intersection is below the height, we hit the side (return some color?)\n    // issues: which side are we facing? (get this from rd?)    \n    vec3 sun_angle = normalize(vec3(0.8, 0.7, 0.5));\n    vec3 entry_point;\n    float t; //distance of current ray\n    // essentially which of the direcitons we are looking along x and y axis\n    vec2 dirs = sign(rd.xy) * -1.0;\n    if (dirs.x == 0.0 || dirs.y == 0.0) (dirs = vec2(1)); // avoid 0.0\n    vec3 d = ((1.0 * vec3(dirs, 1.0)) - ro) /rd; // distance to top, and near planes x/y\n    // if the distance to top is longest, we hit the other two front planes above the upper edge\n    if (d.z > d.x && d.z > d.y) {\n        t = d.z;\n        entry_point = ro + d.z*rd;        \n        // make sure this is grid alinged! (stair step function?\n        //entry_point.xy = floor(vec2(0.5) + entry_point.xy*vec2(cells.xy)*0.5)/(vec2(cells.xy)*0.5);\n        \n        // far miss? (we already know it's not hitting the front\n        if (abs(entry_point.x) > 1.0 || abs(entry_point.y) > 1.0) return sampleGround(ro, rd); vec3(0.1);\n        //return vec3(0.2, 0.2, 1.0); // DEBUG: we enter the top   \n        //return (entry_point);        \n    }\n    // if we hit the x plane before the y plane - we entry at the y plane\n    else if (d.x < d.y) {\n        t = d.y;\n        entry_point = ro + d.y*rd;\n        if (abs(entry_point.x) > 1.0) return sampleGround(ro, rd); //vec3(0.2, 0.1, 0.1); // far miss on the side\n        //return vec3(0.2, 1.0, 0.2); // DEBUG: we enter the Y side\n    }\n    else {// we hit the y plane first and are entrying through the x plane\n        t = d.x;\n        entry_point = ro + d.x*rd;\n        if (abs(entry_point.y) > 1.0) return sampleGround(ro, rd); //vec3(0.1, 0.2, 0.1); // far miss on the side\n        //return vec3(1.0, 0.2, 0.2); //DEBUG we enter the X side\n    }    \n    // TODO: the above is like a AABB, it can easily be simplified I suspect.\n    \n    \n    // near ground hit\n    //return entry_point;\n    if (entry_point.z < 0.0) return sampleGround(ro, rd); //vec3(0.5);\n    \n    //return entry_point;\n    vec3 front_hit = entry_point; // initialize as 1 to not hit the top on the first plane\n    \n    float l = 0.00; // light for the side angle\n    // new loop develops here  - what is the reasonable max?\n    for (int i = 0; i<(cells.x+cells.y)*2; i++){\n        ivec2 current_cell = worldToCell(front_hit, cells.xy);\n        \n        // rear miss -> end reached?\n        if (min(front_hit.x, front_hit.y) < -1.0) return sampleGround(ro, rd); //vec3(0.05*float(i)); // miss neg\n        if (max(front_hit.x, front_hit.y) > 1.0) return sampleGround(ro, rd); //vec3(0.1*float(i));// miss pos\n        \n        vec4 tex = sampleHeight(current_cell);        \n        // hit side?\n        if (front_hit.z < tex.a) {\n            vec3 sun_angle = normalize(vec3(0.8, 0.7, 0.5));\n            float shadow = shadow(front_hit, sun_angle, cells);\n            return vec3(tex.rgb) - shadow; \n        }\n        \n        // return tex.rgb; // debug\n        \n        // hit top, hit right, hit left, miss?\n        // distances to the rear planes .z can be ignored ?=?        \n        // where we actually march to the \"next\" far - wall.\n        \n        vec2 far_walls = cellToWorld(current_cell, cells, dirs);\n        \n        \n        // exit if we are the far wall, likely means we hit the end!\n        //if (far_walls.x == front_hit.x || far_walls.y == front_hit.y) return sampleGround(ro, rd);\n        \n        \n        // distance to next far walls\n        vec3 rear_d = (vec3(far_walls.xy, tex.a) - ro)/rd;\n        //return abs(vec3((rear_d.xyz))*0.5);\n        \n        // the min distance is the nearest wall, we step until there!\n        vec3 rear_hit = ro + rd*min(rear_d.x, rear_d.y); //t;        \n        // return rear_hit;\n        \n        // hit top?\n        if (tex.a > rear_hit.z) {            \n            vec3 hit_top = ro + rd*rear_d.z;\n            float shadow = shadow(hit_top, sun_angle, cells);\n            return vec3(tex.rgb) - shadow;            \n        }\n        \n        if (front_hit == rear_hit) {\n        // if we didn't actually advance, we should nudge here and hope for the best!\n            \n            // TODO: analytical value for this using acos(rd.z)??\n            rear_hit += rd*0.0001;\n        }\n        front_hit = rear_hit; // keep track for the next iteration\n        //return vec3(0.01);\n    }\n    //return sampleGround(ro, rd); // but we shouldn't get here!\n    return vec3(0.8); // percision issues where we ended the loop -.-\n    \n    \n}\n\n\n//TODO: sun angle and showdow casting (from the hit towards the sun...)?\n\nvoid mainImage( out vec4 fragColor, in vec2 fragCoord )\n{\n    // uv normalized to [-1..1] for height with more width\n    vec2 uv = (2.0*fragCoord - iResolution.xy)/iResolution.y;\n    vec2 mo = (2.0*iMouse.xy - iResolution.xy)/iResolution.y;\n    \n    // for when it's just idling...   \n    float azimuth = iTime*0.15 + mo.x;\n    float altitude = 0.7+cos(iTime*0.4)*0.15;      \n    if (sign(iMouse.z) > 0.0){\n        // orbiting camera setup\n        azimuth = PI*mo.x;\n        altitude = 0.5*PI*clamp(mo.y+1.0, -0.01, 0.99); // maybe just positive?\n    }\n    \n    // make sure you don't look \"below\"\n    altitude = clamp(altitude, HEIGHT_SCALE, PI);\n    \n    vec3 camera_pos = vec3(\n        cos(azimuth)*cos(altitude),\n        sin(azimuth)*cos(altitude),\n        sin(altitude));    \n    // the camera is always looking \"at\" the origin\n    vec3 look_dir = vec3(0.0, 0.0, HEIGHT_SCALE*0.5) - camera_pos;\n    \n    //camera_pos += look_dir * -5.0; // moving the camera \"back\" to avoid occlusions?\n    // two vectors orthogonal to this camera direction (tagents?)    \n    //vec3 look_u = camera_pos + vec3(-sin(azimuth), cos(azimuth), 0.0);\n    //vec3 look_v = camera_pos + vec3(sin(altitude)*-cos(azimuth), sin(altitude)*-sin(azimuth), cos(altitude));    \n    \n    // turns out analytically these aren't correct. so using cross instead -.-\n    vec3 look_u = normalize(cross(vec3(0.0, 0.0, -1.0), look_dir));\n    vec3 look_v = normalize(cross(camera_pos, look_u)); // is this faster?\n    // camera plane(origin of each pixel) -> barycentric?\n    \n    // orthographic zoom just makes the sensor smaller\n    float zoom = clamp(1.0 + cos(iTime*0.3), 0.05, 1.5);\n    vec3 camera_plane = camera_pos + (look_u*uv.x)*zoom + (look_v*uv.y)*zoom; // wider fov = larger \"sensor\"    \n        \n    vec3 col = march(camera_plane, look_dir, ivec2(iChannelResolution[0].xy)); // use iChannelResolution[0]?\n    \n    \n    \n    fragColor = vec4(vec3(col),1.0);\n}",
+          "code": "// APache 2.0 no patents \\_%_/\n# define PI 3.141592653\n# define HEIGHT_SCALE 0.4\n\nivec2 worldToCell(vec3 p, ivec2 cells) {\n    // from the sampleTexture function above\n    \n    p += 1.0;\n    p *= 0.5;\n    ivec2 st = ivec2((p.xy*vec2(cells.xy)));\n    // TODO: find an actual solution to the edge cases!\n    st = min(st, cells -1);\n    return st;\n}\n\nvec2 cellToWorld(ivec2 current_cell, ivec2 cells, vec2 dirs){\n    // gives the rear plane of a cell, based on dirs?\n    // TODO: can we avoid this magic epsilon number?\n    // \n    vec2 p = vec2(current_cell);    \n    p -= min(vec2(0.0),dirs); // the \"step\"?\n    \n    // scale and shift    \n    p /= vec2(cells);    \n    p *= 2.0;\n    p -= 1.0;\n    //p = min(p, vec2(1.0));\n    return p;\n    \n}\n\nvec4 sampleHeight(ivec2 cell){\n    // to allow for more complex math to determine height\n    // .rgb should just return the texture color or some modification of it\n    //cell.x = (cell.x + iFrame) % int(iChannelResolution[0].x); // fun texture scroll\n    vec4 tex = texelFetch(iChannel0, cell, 0);\n    vec4 res;\n    res.a = (tex.a + tex.r + tex.g)/3.0;\n    res.rgb = tex.rgb; // * res.a // to make it more of a \"height\" map?\n    //res.rgb = vec3(0.5);\n    res.a *= HEIGHT_SCALE; //TODO: global height scale?\n    return res;\n}\n\nvec3 sampleGround(vec3 ro, vec3 rd){\n    // for any ray that misses the heightmap\n    float ground_height = 0.0;\n    float ground_dist = (ground_height-ro.z)/rd.z;\n    vec3 ground_hit = ro + rd * ground_dist;\n    \n    vec3 col = vec3(fract(ground_hit.xy), ground_dist);\n    \n    // temporary test\n    vec3 sun_angle = normalize(vec3(0.8, 0.7, 0.5));\n    // simple cast to a plane at x=1 (for now)\n    vec3 sun_dist = (vec3(sign(sun_angle.xy)*-1.0, 1.0)-ground_hit)/sun_angle;\n    float closest = max(sun_dist.x, sun_dist.y);\n    vec3 edge_intersect = ground_hit + sun_angle * closest;\n    float shadow = .8;\n    float edge_height = sampleHeight(worldToCell(edge_intersect, ivec2(iChannelResolution[0].xy))).a;\n    if (edge_intersect.z < edge_height && abs(max(edge_intersect.x, edge_intersect.y)) < 1.0) {\n        shadow = 0.2;\n    }\n    // if this is negative we missed the whole block\n    if (closest < 0.0) shadow = 0.8;\n    \n    col.rgb *= shadow;\n    return col;\n}\n\nfloat shadow(vec3 ro, vec3 rd, ivec2 cells){\n    // return the amount of shadowed?\n    // we are now marching upwards from some hit\n    // ro is essentially the point we started from\n    // rd is the sun angle        \n    \n    vec2 dirs = sign(rd.xy) * -1.0;\n    if (dirs.x == 0.0 || dirs.y == 0.0) (dirs = vec2(1)); // avoid 0.0\n    \n    vec3 hit = ro;\n    int i;\n    for(i=0; i <(cells.x+cells.y)*2; i++){\n        if (min(hit.x, hit.y) < -1.0) return float(0.0);\n        if (max(hit.x, hit.y) > 1.0) return float(0.0);\n        ivec2 current_cell = worldToCell(hit, cells);          \n        \n        \n        vec3 rear_walls = vec3(cellToWorld(current_cell, cells, dirs), 1.0); \n        \n        vec4 tex = sampleHeight(current_cell);\n        \n        vec3 far_dist = (rear_walls-hit)/rd;\n        \n        \n        //TODO: the side hit on the first seems to be wrong height...\n        // side hit -> full shadow\n        // fake penumbra: scaled by distance\n        if (tex.a > hit.z && i>=1) return 0.3-length(hit-ro);\n        //if (i >= 5) return tex.aaa;\n        \n        // top hit -> looking at sun\n        if (far_dist.z < max(far_dist.x, far_dist.y)) return float(0.0);\n        // now side hit or miss\n        \n        //advance the ray to closest edge\n        vec3 next_hit = hit + rd*min(far_dist.x, far_dist.y);\n        if (hit == next_hit) {\n            next_hit = hit + rd*0.001;\n        }                \n        hit = next_hit;\n    }    \n    // don't know yet...\n    return float(0.9);\n\n}\n\n\nvec3 march (vec3 ro, vec3 rd, ivec2 cells){\n    // the idea is to march the ray to the next cell boundry.\n    // sample the texture and check height\n    // if the intersection ray is above the height, we missed this block\n    // if the intersection is below 0, we are outside the texture (return black)\n    // if the intersection is below the height, we hit the side (return some color?)\n    // issues: which side are we facing? (get this from rd?)    \n    vec3 sun_angle = normalize(vec3(0.8, 0.7, 0.5));\n    vec3 entry_point;\n    float t; //distance of current ray\n    // essentially which of the direcitons we are looking along x and y axis\n    vec2 dirs = sign(rd.xy) * -1.0;\n    if (dirs.x == 0.0 || dirs.y == 0.0) (dirs = vec2(1)); // avoid 0.0\n    vec3 d = ((1.0 * vec3(dirs, 1.0)) - ro) /rd; // distance to top, and near planes x/y\n    // if the distance to top is longest, we hit the other two front planes above the upper edge\n    if (d.z > d.x && d.z > d.y) {\n        t = d.z;\n        entry_point = ro + d.z*rd;        \n        // make sure this is grid alinged! (stair step function?\n        //entry_point.xy = floor(vec2(0.5) + entry_point.xy*vec2(cells.xy)*0.5)/(vec2(cells.xy)*0.5);\n        \n        // far miss? (we already know it's not hitting the front\n        if (abs(entry_point.x) > 1.0 || abs(entry_point.y) > 1.0) return sampleGround(ro, rd); vec3(0.1);\n        //return vec3(0.2, 0.2, 1.0); // DEBUG: we enter the top   \n        //return (entry_point);        \n    }\n    // if we hit the x plane before the y plane - we entry at the y plane\n    else if (d.x < d.y) {\n        t = d.y;\n        entry_point = ro + d.y*rd;\n        if (abs(entry_point.x) > 1.0) return sampleGround(ro, rd); //vec3(0.2, 0.1, 0.1); // far miss on the side\n        //return vec3(0.2, 1.0, 0.2); // DEBUG: we enter the Y side\n    }\n    else {// we hit the y plane first and are entrying through the x plane\n        t = d.x;\n        entry_point = ro + d.x*rd;\n        if (abs(entry_point.y) > 1.0) return sampleGround(ro, rd); //vec3(0.1, 0.2, 0.1); // far miss on the side\n        //return vec3(1.0, 0.2, 0.2); //DEBUG we enter the X side\n    }    \n    // TODO: the above is like a AABB, it can easily be simplified I suspect.\n    \n    \n    // near ground hit\n    //return entry_point;\n    if (entry_point.z < 0.0) return sampleGround(ro, rd); //vec3(0.5);\n    \n    //return entry_point;\n    vec3 front_hit = entry_point; // initialize as 1 to not hit the top on the first plane\n    \n    float l = 0.00; // light for the side angle\n    // new loop develops here  - what is the reasonable max?\n    for (int i = 0; i<(cells.x+cells.y)*2; i++){\n        ivec2 current_cell = worldToCell(front_hit, cells.xy);\n        \n        // rear miss -> end reached?\n        if (min(front_hit.x, front_hit.y) < -1.0) return sampleGround(ro, rd); //vec3(0.05*float(i)); // miss neg\n        if (max(front_hit.x, front_hit.y) > 1.0) return sampleGround(ro, rd); //vec3(0.1*float(i));// miss pos\n        \n        vec4 tex = sampleHeight(current_cell);        \n        // hit side?\n        if (front_hit.z < tex.a) {\n            vec3 sun_angle = normalize(vec3(0.8, 0.7, 0.5));\n            float shadow = shadow(front_hit, sun_angle, cells);\n            return vec3(tex.rgb) - shadow; \n        }\n        \n        // return tex.rgb; // debug\n        \n        // hit top, hit right, hit left, miss?\n        // distances to the rear planes .z can be ignored ?=?        \n        // where we actually march to the \"next\" far - wall.\n        \n        vec2 far_walls = cellToWorld(current_cell, cells, dirs);\n        \n        \n        // exit if we are the far wall, likely means we hit the end!\n        //if (far_walls.x == front_hit.x || far_walls.y == front_hit.y) return sampleGround(ro, rd);\n        \n        \n        // distance to next far walls\n        vec3 rear_d = (vec3(far_walls.xy, tex.a) - ro)/rd;\n        //return abs(vec3((rear_d.xyz))*0.5);\n        \n        // the min distance is the nearest wall, we step until there!\n        vec3 rear_hit = ro + rd*min(rear_d.x, rear_d.y); //t;        \n        // return rear_hit;\n        \n        // hit top?\n        if (tex.a > rear_hit.z) {            \n            vec3 hit_top = ro + rd*rear_d.z;\n            float shadow = shadow(hit_top, sun_angle, cells);\n            return vec3(tex.rgb) - shadow;            \n        }\n        \n        if (front_hit == rear_hit) {\n        // if we didn't actually advance, we should nudge here and hope for the best!\n            \n            // TODO: analytical value for this using acos(rd.z)??\n            rear_hit += rd*0.0001;\n        }\n        front_hit = rear_hit; // keep track for the next iteration\n        //return vec3(0.01);\n    }\n    //return sampleGround(ro, rd); // but we shouldn't get here!\n    return vec3(0.8); // percision issues where we ended the loop -.-\n    \n    \n}\n\n\n//TODO: sun angle and showdow casting (from the hit towards the sun...)?\n\nvoid mainImage( out vec4 fragColor, in vec2 fragCoord )\n{\n    // uv normalized to [-1..1] for height with more width\n    vec2 uv = (2.0*fragCoord - iResolution.xy)/iResolution.y;\n    vec2 mo = (2.0*iMouse.xy - iResolution.xy)/iResolution.y;\n    \n    // for when it's just idling...   \n    float azimuth = iTime*0.15 + mo.x;\n    float altitude = 0.7+cos(iTime*0.4)*0.15;      \n    if (sign(iMouse.z) > 0.0){\n        // orbiting camera setup\n        azimuth = PI*mo.x;\n        altitude = 0.5*PI*clamp(mo.y+1.0, -0.01, 0.99); // maybe just positive?\n    }\n    \n    // make sure you don't look \"below\"\n    altitude = clamp(altitude, HEIGHT_SCALE, PI);\n    \n    vec3 camera_pos = vec3(\n        cos(azimuth)*cos(altitude),\n        sin(azimuth)*cos(altitude),\n        sin(altitude));    \n    // the camera is always looking \"at\" the origin\n    vec3 look_dir = vec3(0.0, 0.0, HEIGHT_SCALE*0.5) - camera_pos;\n    \n    //camera_pos += look_dir * -5.0; // moving the camera \"back\" to avoid occlusions?\n    // two vectors orthogonal to this camera direction (tagents?)    \n    //vec3 look_u = camera_pos + vec3(-sin(azimuth), cos(azimuth), 0.0);\n    //vec3 look_v = camera_pos + vec3(sin(altitude)*-cos(azimuth), sin(altitude)*-sin(azimuth), cos(altitude));    \n    \n    // turns out analytically these aren't correct. so using cross instead -.-\n    vec3 look_u = normalize(cross(vec3(0.0, 0.0, -1.0), look_dir));\n    vec3 look_v = normalize(cross(camera_pos, look_u)); // is this faster?\n    // camera plane(origin of each pixel) -> barycentric?\n    \n    // orthographic zoom just makes the sensor smaller\n    float zoom = clamp(1.0 + cos(iTime*0.3), 0.05, 1.5);\n    vec3 camera_plane = camera_pos + (look_u*uv.x)*zoom + (look_v*uv.y)*zoom; // wider fov = larger \"sensor\"    \n        \n    vec3 col = march(camera_plane, look_dir, ivec2(iChannelResolution[0].xy)); // use iChannelResolution[0]?\n    \n    \n    \n    fragColor = vec4(vec3(col),1.0);\n}",
           "name": "Image",
           "description": "",
           "type": "image"
@@ -209,7 +332,7 @@
       "info": {
         "id": "X3KyRd",
         "date": "1737245413",
-        "viewed": 61,
+        "viewed": 68,
         "name": "Orthographic path tracing? ",
         "username": "jakel101",
         "description": "trying to figure out how this would work (without looking it up)\n\nneeded for this unreleased one: https://www.shadertoy.com/view/lXycDz",
@@ -222,7 +345,7 @@
           "orthographic"
         ],
         "hasliked": 0,
-        "retrieved": "2025-04-07T00:22:10.977114+00:00"
+        "retrieved": "2025-05-19T01:18:02.782621+00:00"
       },
       "renderpass": [
         {
@@ -245,11 +368,11 @@
       "info": {
         "id": "lXyyzR",
         "date": "1735848777",
-        "viewed": 98,
+        "viewed": 111,
         "name": "Persistent Music Visualizer",
         "username": "jakel101",
         "description": "to have some of the element be reactive over time, the persistence is done over time in a Buffer.\nChange the Music in Buffer A Channel1\nChange channel0 to be sampled nearest instead of linear\ndeveloped on 165 Hz, might look worse on 60!",
-        "likes": 2,
+        "likes": 4,
         "published": 3,
         "flags": 32,
         "usePreview": 0,
@@ -259,7 +382,7 @@
           "infinity"
         ],
         "hasliked": 0,
-        "retrieved": "2025-04-07T00:22:10.977114+00:00"
+        "retrieved": "2025-05-19T01:18:02.782621+00:00"
       },
       "renderpass": [
         {

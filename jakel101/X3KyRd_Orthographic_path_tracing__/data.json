@@ -3,7 +3,7 @@
   "info": {
     "id": "X3KyRd",
     "date": "1737245413",
-    "viewed": 61,
+    "viewed": 68,
     "name": "Orthographic path tracing? ",
     "username": "jakel101",
     "description": "trying to figure out how this would work (without looking it up)\n\nneeded for this unreleased one: https://www.shadertoy.com/view/lXycDz",
@@ -16,7 +16,7 @@
       "orthographic"
     ],
     "hasliked": 0,
-    "retrieved": "2025-04-07T00:22:10.977114+00:00"
+    "retrieved": "2025-05-19T01:18:02.782621+00:00"
   },
   "renderpass": [
     {
