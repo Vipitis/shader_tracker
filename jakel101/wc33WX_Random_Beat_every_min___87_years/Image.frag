@@ -1,4 +1,7 @@
 // Apache 2.0 no patents =_=
+// attributions welcome!
+// would love to hear abour your interpretation for this!
+
 
 /*
 * 
@@ -150,6 +153,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     
     float line_dist = sdLineSegment(uv, vec2(0.85, 0.3), vec2(-0.85, 0.3));
 
+    //TODO: more interesting background texture, maybe paper
     vec3 col = vec3(0.95, 0.98, 0.90);
     
     float bg_lines = blank(uv);
