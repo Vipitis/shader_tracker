@@ -3,7 +3,7 @@
   "info": {
     "id": "Mcjfzd",
     "date": "1725403601",
-    "viewed": 78,
+    "viewed": 101,
     "name": "for-loop mistranslation ref",
     "username": "jakel101",
     "description": "This issue serves as a reference for WebGL behaviour. It is public+API so testing via other clients is possible.\nit should be a solid brownish color. If you see different halfs something might be wrong with your implementation.",
@@ -16,7 +16,7 @@
       "error"
     ],
     "hasliked": 0,
-    "retrieved": "2024-12-21T00:08:28.822842+00:00"
+    "retrieved": "2025-06-05T23:49:51.807010+00:00"
   },
   "renderpass": [
     {

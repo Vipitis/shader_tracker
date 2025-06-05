@@ -3,7 +3,7 @@
   "info": {
     "id": "MflcRj",
     "date": "1721334367",
-    "viewed": 124,
+    "viewed": 146,
     "name": "Brushed aluminium texture",
     "username": "jakel101",
     "description": "my attempt and doing a noise based brushed aluminium texture. The basic idea being you simply start with noise and then use directional blur.\nwould likely do better with added fractal noise to look sharper?\nlength and scale are fun to play with... (mouse)",
@@ -17,7 +17,7 @@
       "texture"
     ],
     "hasliked": 0,
-    "retrieved": "2024-12-21T00:08:28.822842+00:00"
+    "retrieved": "2025-06-05T23:49:51.807010+00:00"
   },
   "renderpass": [
     {

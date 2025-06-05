@@ -3,7 +3,7 @@
   "info": {
     "id": "lXl3Dj",
     "date": "1707948239",
-    "viewed": 124,
+    "viewed": 139,
     "name": "Pow() behavior with negatives",
     "username": "jakel101",
     "description": "Test shader to see how the pow() function behaves with negative numbers. According the the help (bottom right corner): \n> pow/sqrt: please don't feed sqrt() and pow() with negative numbers. Add an abs() or max(0.0,) to the argument",
@@ -15,7 +15,7 @@
       "test"
     ],
     "hasliked": 0,
-    "retrieved": "2024-12-21T00:08:28.822842+00:00"
+    "retrieved": "2025-06-05T23:49:51.807010+00:00"
   },
   "renderpass": [
     {

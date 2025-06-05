@@ -3,7 +3,7 @@
   "info": {
     "id": "X3lfW2",
     "date": "1728936073",
-    "viewed": 58,
+    "viewed": 79,
     "name": "a little planet? (WIP)",
     "username": "jakel101",
     "description": "inspired by the render at 11:40 in this video: https://www.youtube.com/watch?v=o879xRxmwmU\nTrying to figure out how to map noise to a sphere and use that in raymarching some shells... but ended up just having noise in the whole volume ....",
@@ -17,7 +17,7 @@
       "spheres"
     ],
     "hasliked": 0,
-    "retrieved": "2024-12-21T00:08:28.822842+00:00"
+    "retrieved": "2025-06-05T23:49:51.807010+00:00"
   },
   "renderpass": [
     {

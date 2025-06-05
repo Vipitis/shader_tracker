@@ -3,11 +3,11 @@
   "info": {
     "id": "lXK3WV",
     "date": "1718307576",
-    "viewed": 144,
+    "viewed": 168,
     "name": "particle gravity simulation test",
     "username": "jakel101",
-    "description": "shader to implement a very basic physics simulation using buffers. Use mouse+click as a wrongly scaled gravity attractor!\nalt+downarrow to reload\nconstants to edit in Common",
-    "likes": 1,
+    "description": "shader to implement a very basic physics simulation using buffers. Use mouse+click as a still in progress gravity attractor\nalt+downarrow to reload\nconstants to edit in Common",
+    "likes": 2,
     "published": 3,
     "flags": 32,
     "usePreview": 0,
@@ -17,7 +17,7 @@
       "physics"
     ],
     "hasliked": 0,
-    "retrieved": "2024-12-21T00:08:28.822842+00:00"
+    "retrieved": "2025-06-05T23:49:51.807010+00:00"
   },
   "renderpass": [
     {
@@ -51,7 +51,7 @@
     {
       "inputs": [],
       "outputs": [],
-      "code": "// the common pass holds various constants that change the simulation\n\n# define SIM_SPEED 20.0\n# define GRAVITY 0.01\n# define ATTRACT 0.02\n# define RADIUS 0.1\n# define WIDTH 1.6\n# define HEIGHT 1.0\n# define SCALE 1.1\n# define BOUNCE 0.9\n\n// not yet implemented\n# define NUM_PARTICLES 1",
+      "code": "// the common pass holds various constants that change the simulation\n\n# define SIM_SPEED 20.0\n# define GRAVITY 0.01\n# define ATTRACT 0.0005\n# define RADIUS 0.1\n# define WIDTH 1.6\n# define HEIGHT 1.0\n# define SCALE 1.1\n# define BOUNCE 0.9\n\n// not yet implemented\n# define NUM_PARTICLES 1",
       "name": "Common",
       "description": "",
       "type": "common"
@@ -79,7 +79,7 @@
           "channel": 0
         }
       ],
-      "code": "// the Buffer A pass holds information about each particle\n// the Red and Green channels are X and Y coordinates\n// the Blue and Alpha channels are X and Y velocity\n// you first load the previous buffer and then do a simulation step.\n// Buffer A gets rendered before Image.\n\n\nvoid mainImage( out vec4 fragColor, in vec2 fragCoord )\n{\n    // uv is set to the center\n    vec2 uv = (2.0*fragCoord - iResolution.xy)/iResolution.y;\n    vec2 m = (2.0*iMouse.xy - iResolution.xy)/iResolution.y;\n        \n    // load previous state\n    vec4 data = texture(iChannel0, uv);    \n    vec2 pos = data.xy;\n    vec2 vel = data.zw;\n    \n    // on initialization, add a bit of sideways motion and start top left\n    if (iFrame == 0) {\n        vel.x += 0.5;\n        pos.x += -WIDTH + RADIUS * 2.0;\n        pos.y += HEIGHT - RADIUS * 2.0;\n    }\n    \n    //mouse attractor, with a factor, only active when mouse is held down\n    vel += (m-pos) * ATTRACT * max(0.0,sign(iMouse.z));   \n    \n    // add gravity\n    vel.y -= GRAVITY * (pos.y+1.0);\n    \n        \n    // move to next position\n    vec2 new_pos = pos + vel * iTimeDelta * SIM_SPEED;\n\n    \n    // simple collision and reflection\n    if (abs(new_pos.x) + RADIUS >= WIDTH) {\n        vel.x *= -BOUNCE;\n        new_pos.x = pos.x;// + (abs(new_pos).x-WIDTH)*vel.x;\n        \n    }\n    if (abs(new_pos.y) + RADIUS >= HEIGHT) {\n        vel.y *= -BOUNCE;\n        new_pos.y = pos.y;// + (abs(new_pos).y-WIDTH)*vel.y;\n        vel.x *= 0.99; //friction\n    }\n    \n    \n\n    fragColor = vec4(new_pos, vel);\n}",
+      "code": "// the Buffer A pass holds information about each particle\n// the Red and Green channels are X and Y coordinates\n// the Blue and Alpha channels are X and Y velocity\n// you first load the previous buffer and then do a simulation step.\n// Buffer A gets rendered before Image.\n\n\nvoid mainImage( out vec4 fragColor, in vec2 fragCoord )\n{\n    // uv is set to the center\n    vec2 uv = (2.0*fragCoord - iResolution.xy)/iResolution.y;\n    vec2 m = (2.0*iMouse.xy - iResolution.xy)/iResolution.y;\n        \n    // load previous state\n    vec4 data = texture(iChannel0, uv);    \n    vec2 pos = data.xy;\n    vec2 vel = data.zw;\n    \n    // on initialization, add a bit of sideways motion and start top left\n    if (iFrame == 0) {\n        vel.x += 0.5;\n        pos.x += -WIDTH + RADIUS * 2.0;\n        pos.y += HEIGHT - RADIUS * 2.0;\n    }\n    \n    //mouse attractor, with a factor, only active when mouse is held down\n    // F = G((m1*m2)/(r^2)) // ATTRACT is out G constant, masses are just 1\n    vel += (m-pos)* (1.0)/pow(length(m-pos),2.0) * ATTRACT * max(0.0,sign(iMouse.z));\n        \n    // add gravity\n    vel.y -= GRAVITY * (pos.y+1.0);\n    \n    // trying to \"hold\" the ball\n    //if (length(m-pos) <= RADIUS && iMouse.z > 0.0) {\n        //vel=vec2(0.0);\n        //pos=m;//TODO: this loses the ball on release    \n    //}\n        \n    // move to next position\n    vec2 new_pos = pos + vel * iTimeDelta * SIM_SPEED;\n\n    \n    // simple collision and reflection\n    if (abs(new_pos.x) + RADIUS >= WIDTH) {\n        vel.x *= -BOUNCE;\n        new_pos.x = pos.x;// + (abs(new_pos).x-WIDTH)*vel.x;\n        \n    }\n    if (abs(new_pos.y) + RADIUS >= HEIGHT) {\n        vel.y *= -BOUNCE;\n        new_pos.y = pos.y;// + (abs(new_pos).y-WIDTH)*vel.y;\n        vel.x *= 0.99; //friction\n    }\n    \n    \n\n    fragColor = vec4(new_pos, vel);\n}",
       "name": "Buffer A",
       "description": "",
       "type": "buffer"

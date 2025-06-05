@@ -8,7 +8,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     // crosshair
     col.r = smoothstep(fwidth(uv.y), 0.0, min(abs(uv.x),abs(uv.y)));
     
-    // angle value in radians 0..1
+    // angle value in revolutions 0..1
     float val = mod(atan(uv.x, uv.y), PI*2.0);
     col.g += val/(PI*2.0);
     

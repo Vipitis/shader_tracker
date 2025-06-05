@@ -2,18 +2,25 @@
 # define PI 3.141592653
 # define HEIGHT_SCALE 0.4
 
-ivec2 worldToCell(vec3 p, ivec2 cells) {
-    // from the sampleTexture function above
+// resolution of the sampled area
+# define CELLS ivec2(iChannelResolution[0].xy)
+
+// unsure yet where to bring this!
+# define SUN normalize(vec3(sin(iDate.w), cos(iTime), 0.25))
+
+
+ivec2 worldToCell(vec3 p) {
     
+    // move world space again
     p += 1.0;
     p *= 0.5;
-    ivec2 st = ivec2((p.xy*vec2(cells.xy)));
+    ivec2 st = ivec2((p.xy*vec2(CELLS.xy)));
     // TODO: find an actual solution to the edge cases!
-    st = min(st, cells -1);
+    st = min(st, CELLS -1);
     return st;
 }
 
-vec2 cellToWorld(ivec2 current_cell, ivec2 cells, vec2 dirs){
+vec2 cellToWorld(ivec2 current_cell,  vec2 dirs){
     // gives the rear plane of a cell, based on dirs?
     // TODO: can we avoid this magic epsilon number?
     // 
@@ -21,13 +28,52 @@ vec2 cellToWorld(ivec2 current_cell, ivec2 cells, vec2 dirs){
     p -= min(vec2(0.0),dirs); // the "step"?
     
     // scale and shift    
-    p /= vec2(cells);    
+    p /= vec2(CELLS);
     p *= 2.0;
     p -= 1.0;
     //p = min(p, vec2(1.0));
     return p;
     
 }
+
+vec3 AABB(vec3 center, vec3 extend, vec3 ro, vec3 rd){        
+    // extend goes both ways! (size)
+    vec3 front = center + sign(-rd)*extend; 
+    vec3 rear = center + sign(rd)*extend; 
+    
+    //now distance those 6 planes:
+    vec3 front_dist = (front-ro)/rd;
+    vec3 rear_dist = (rear-ro)/rd;
+    
+    // TODO: turn into massive if/else if/else blocks for the direction info?
+    float front_hit = max(max(front_dist.x, front_dist.y), front_dist.z); // front 
+    float rear_hit = min(min(rear_dist.x, rear_dist.y), rear_dist.z);
+    vec3 res = vec3(front_hit, rear_hit, 0.0);    
+    if (front_hit > rear_hit){
+        // TODO: encode this information otherwise
+        res.x = -1.0;
+        res.y = -1.0;
+    }
+    // TODO: encode hit side/normal in .z and .w
+    return res;
+}
+
+vec3 pillar_hits(ivec2 cell, float height, vec3 ro, vec3 rd){
+    // returns the front and rear distance
+    // if both values are negative it's a miss
+    // .zw contains information about the entry/exit 0: +x, 1: -x, 2: +y, 3: -y, 4: +z, 5: -z??
+    
+    // let's move the pillar into world space by having it's center + extends    
+    vec3 extend = vec3(1.0/vec2(CELLS), height*0.5);
+    vec3 p = vec3(cell.xy, height*0.5);    
+    p.xy *= extend.xy; 
+    p.xy *= 2.0;
+    p.xy -= 1.0 - extend.xy; // not quite the offset?
+    // TODO: redo this math when less asleep...
+    vec3 res = AABB(p, extend, ro, rd);
+    return res;
+}
+
 
 vec4 sampleHeight(ivec2 cell){
     // to allow for more complex math to determine height
@@ -38,7 +84,7 @@ vec4 sampleHeight(ivec2 cell){
     res.a = (tex.a + tex.r + tex.g)/3.0;
     res.rgb = tex.rgb; // * res.a // to make it more of a "height" map?
     //res.rgb = vec3(0.5);
-    res.a *= HEIGHT_SCALE; //TODO: global height scale?
+    res.a *= HEIGHT_SCALE;
     return res;
 }
 
@@ -51,181 +97,85 @@ vec3 sampleGround(vec3 ro, vec3 rd){
     vec3 col = vec3(fract(ground_hit.xy), ground_dist);
     
     // temporary test
-    vec3 sun_angle = normalize(vec3(0.8, 0.7, 0.5));
+    vec3 sun_angle = SUN;
     // simple cast to a plane at x=1 (for now)
     vec3 sun_dist = (vec3(sign(sun_angle.xy)*-1.0, 1.0)-ground_hit)/sun_angle;
     float closest = max(sun_dist.x, sun_dist.y);
     vec3 edge_intersect = ground_hit + sun_angle * closest;
     float shadow = .8;
-    float edge_height = sampleHeight(worldToCell(edge_intersect, ivec2(iChannelResolution[0].xy))).a;
+    float edge_height = sampleHeight(worldToCell(edge_intersect)).a;
     if (edge_intersect.z < edge_height && abs(max(edge_intersect.x, edge_intersect.y)) < 1.0) {
         shadow = 0.2;
+        //TODO: this needs to go further if above untill we leave the top of the box....
     }
     // if this is negative we missed the whole block
     if (closest < 0.0) shadow = 0.8;
+    
     
     col.rgb *= shadow;
     return col;
 }
 
-float shadow(vec3 ro, vec3 rd, ivec2 cells){
+vec4 raycast(vec3 ro, vec3 rd){
+    // cast the ray untill there is a hit or we exit the box
+    // "any hit" shader?
+    // returns tex + dist
+    
+    vec3 box_hit = AABB(vec3(0.0, 0.0, HEIGHT_SCALE*0.5), vec3(1.0, 1.0, HEIGHT_SCALE*0.5), ro, rd);
+    // miss
+    if ( box_hit.x < 0.0 && box_hit.y < 0.0){
+        // likely sample round here
+        return vec4(sampleGround(ro, rd).rgb, -1.0);
+    }        
+    vec3 entry;
+    entry = ro + (rd*box_hit.x);
+    int i;
+    int max_depth = (CELLS.x + CELLS.y)+2; // could also be min!    
+    for (i = 0; i < max_depth; i++){
+        ivec2 current_cell = worldToCell(entry); // TODO: this one is problematic!
+        vec4 tex = sampleHeight(current_cell);
+        vec3 hit = pillar_hits(current_cell, HEIGHT_SCALE, ro, rd);
+        // miss to the sides -shouldn't happen!?
+        vec3 exit = ro + (rd * hit.y);        
+        if ( hit.x < 0.0 && hit.y < 0.0){
+            //return vec4(tex.a);            
+        }
+        
+        else if (exit.z > tex.a) {
+            // top miss -> continues   (breaks shadows!)         
+        }                
+        else {
+            // must be hit side here!            
+            return vec4(tex.rgb, hit.x);
+        }
+        
+        //return entry.rgbb;
+        exit += rd*0.001; // nudge needed to step into new cell from exit pos!
+        entry = exit;
+    }
+    
+    // defualt "miss"?
+    return vec4(sampleGround(ro, rd).rgb, -1.0);
+
+}
+
+float shadow(vec3 ro, vec3 rd){
     // return the amount of shadowed?
     // we are now marching upwards from some hit
     // ro is essentially the point we started from
-    // rd is the sun angle        
+    // rd is the sun angle
     
-    vec2 dirs = sign(rd.xy) * -1.0;
-    if (dirs.x == 0.0 || dirs.y == 0.0) (dirs = vec2(1)); // avoid 0.0
+    vec4 res = raycast(ro, rd);
     
-    vec3 hit = ro;
-    int i;
-    for(i=0; i <(cells.x+cells.y)*2; i++){
-        if (min(hit.x, hit.y) < -1.0) return float(0.0);
-        if (max(hit.x, hit.y) > 1.0) return float(0.0);
-        ivec2 current_cell = worldToCell(hit, cells);          
-        
-        
-        vec3 rear_walls = vec3(cellToWorld(current_cell, cells, dirs), 1.0); 
-        
-        vec4 tex = sampleHeight(current_cell);
-        
-        vec3 far_dist = (rear_walls-hit)/rd;
-        
-        
-        //TODO: the side hit on the first seems to be wrong height...
-        // side hit -> full shadow
-        // fake penumbra: scaled by distance
-        if (tex.a > hit.z && i>=1) return 0.3-length(hit-ro);
-        //if (i >= 5) return tex.aaa;
-        
-        // top hit -> looking at sun
-        if (far_dist.z < max(far_dist.x, far_dist.y)) return float(0.0);
-        // now side hit or miss
-        
-        //advance the ray to closest edge
-        vec3 next_hit = hit + rd*min(far_dist.x, far_dist.y);
-        if (hit == next_hit) {
-            next_hit = hit + rd*0.001;
-        }                
-        hit = next_hit;
-    }    
-    // don't know yet...
-    return float(0.9);
-
-}
-
-
-vec3 march (vec3 ro, vec3 rd, ivec2 cells){
-    // the idea is to march the ray to the next cell boundry.
-    // sample the texture and check height
-    // if the intersection ray is above the height, we missed this block
-    // if the intersection is below 0, we are outside the texture (return black)
-    // if the intersection is below the height, we hit the side (return some color?)
-    // issues: which side are we facing? (get this from rd?)    
-    vec3 sun_angle = normalize(vec3(0.8, 0.7, 0.5));
-    vec3 entry_point;
-    float t; //distance of current ray
-    // essentially which of the direcitons we are looking along x and y axis
-    vec2 dirs = sign(rd.xy) * -1.0;
-    if (dirs.x == 0.0 || dirs.y == 0.0) (dirs = vec2(1)); // avoid 0.0
-    vec3 d = ((1.0 * vec3(dirs, 1.0)) - ro) /rd; // distance to top, and near planes x/y
-    // if the distance to top is longest, we hit the other two front planes above the upper edge
-    if (d.z > d.x && d.z > d.y) {
-        t = d.z;
-        entry_point = ro + d.z*rd;        
-        // make sure this is grid alinged! (stair step function?
-        //entry_point.xy = floor(vec2(0.5) + entry_point.xy*vec2(cells.xy)*0.5)/(vec2(cells.xy)*0.5);
-        
-        // far miss? (we already know it's not hitting the front
-        if (abs(entry_point.x) > 1.0 || abs(entry_point.y) > 1.0) return sampleGround(ro, rd); vec3(0.1);
-        //return vec3(0.2, 0.2, 1.0); // DEBUG: we enter the top   
-        //return (entry_point);        
+    // likely means outside the box/ground!
+    if (res.a < 0.0){
+        return 0.0;
     }
-    // if we hit the x plane before the y plane - we entry at the y plane
-    else if (d.x < d.y) {
-        t = d.y;
-        entry_point = ro + d.y*rd;
-        if (abs(entry_point.x) > 1.0) return sampleGround(ro, rd); //vec3(0.2, 0.1, 0.1); // far miss on the side
-        //return vec3(0.2, 1.0, 0.2); // DEBUG: we enter the Y side
+    else {
+        return 0.5;
     }
-    else {// we hit the y plane first and are entrying through the x plane
-        t = d.x;
-        entry_point = ro + d.x*rd;
-        if (abs(entry_point.y) > 1.0) return sampleGround(ro, rd); //vec3(0.1, 0.2, 0.1); // far miss on the side
-        //return vec3(1.0, 0.2, 0.2); //DEBUG we enter the X side
-    }    
-    // TODO: the above is like a AABB, it can easily be simplified I suspect.
-    
-    
-    // near ground hit
-    //return entry_point;
-    if (entry_point.z < 0.0) return sampleGround(ro, rd); //vec3(0.5);
-    
-    //return entry_point;
-    vec3 front_hit = entry_point; // initialize as 1 to not hit the top on the first plane
-    
-    float l = 0.00; // light for the side angle
-    // new loop develops here  - what is the reasonable max?
-    for (int i = 0; i<(cells.x+cells.y)*2; i++){
-        ivec2 current_cell = worldToCell(front_hit, cells.xy);
-        
-        // rear miss -> end reached?
-        if (min(front_hit.x, front_hit.y) < -1.0) return sampleGround(ro, rd); //vec3(0.05*float(i)); // miss neg
-        if (max(front_hit.x, front_hit.y) > 1.0) return sampleGround(ro, rd); //vec3(0.1*float(i));// miss pos
-        
-        vec4 tex = sampleHeight(current_cell);        
-        // hit side?
-        if (front_hit.z < tex.a) {
-            vec3 sun_angle = normalize(vec3(0.8, 0.7, 0.5));
-            float shadow = shadow(front_hit, sun_angle, cells);
-            return vec3(tex.rgb) - shadow; 
-        }
-        
-        // return tex.rgb; // debug
-        
-        // hit top, hit right, hit left, miss?
-        // distances to the rear planes .z can be ignored ?=?        
-        // where we actually march to the "next" far - wall.
-        
-        vec2 far_walls = cellToWorld(current_cell, cells, dirs);
-        
-        
-        // exit if we are the far wall, likely means we hit the end!
-        //if (far_walls.x == front_hit.x || far_walls.y == front_hit.y) return sampleGround(ro, rd);
-        
-        
-        // distance to next far walls
-        vec3 rear_d = (vec3(far_walls.xy, tex.a) - ro)/rd;
-        //return abs(vec3((rear_d.xyz))*0.5);
-        
-        // the min distance is the nearest wall, we step until there!
-        vec3 rear_hit = ro + rd*min(rear_d.x, rear_d.y); //t;        
-        // return rear_hit;
-        
-        // hit top?
-        if (tex.a > rear_hit.z) {            
-            vec3 hit_top = ro + rd*rear_d.z;
-            float shadow = shadow(hit_top, sun_angle, cells);
-            return vec3(tex.rgb) - shadow;            
-        }
-        
-        if (front_hit == rear_hit) {
-        // if we didn't actually advance, we should nudge here and hope for the best!
-            
-            // TODO: analytical value for this using acos(rd.z)??
-            rear_hit += rd*0.0001;
-        }
-        front_hit = rear_hit; // keep track for the next iteration
-        //return vec3(0.01);
-    }
-    //return sampleGround(ro, rd); // but we shouldn't get here!
-    return vec3(0.8); // percision issues where we ended the loop -.-
-    
-    
-}
+}    
 
-
-//TODO: sun angle and showdow casting (from the hit towards the sun...)?
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
@@ -252,7 +202,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     // the camera is always looking "at" the origin
     vec3 look_dir = vec3(0.0, 0.0, HEIGHT_SCALE*0.5) - camera_pos;
     
-    //camera_pos += look_dir * -5.0; // moving the camera "back" to avoid occlusions?
+    camera_pos += look_dir * -1.0; // moving the camera "back" to avoid occlusions?
     // two vectors orthogonal to this camera direction (tagents?)    
     //vec3 look_u = camera_pos + vec3(-sin(azimuth), cos(azimuth), 0.0);
     //vec3 look_v = camera_pos + vec3(sin(altitude)*-cos(azimuth), sin(altitude)*-sin(azimuth), cos(altitude));    
@@ -266,7 +216,13 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     float zoom = clamp(1.0 + cos(iTime*0.3), 0.05, 1.5);
     vec3 camera_plane = camera_pos + (look_u*uv.x)*zoom + (look_v*uv.y)*zoom; // wider fov = larger "sensor"    
         
-    vec3 col = march(camera_plane, look_dir, ivec2(iChannelResolution[0].xy)); // use iChannelResolution[0]?
+    
+    // actual stuff happening:
+    vec4 res = raycast(camera_plane, look_dir);
+    vec3 hit = camera_plane + look_dir*res.a;    
+    float shadow_amt = shadow(hit, SUN);    
+    
+    vec3 col = res.rgb - shadow_amt;
     
     
     

@@ -3,11 +3,11 @@
   "info": {
     "id": "Xfyyzd",
     "date": "1732231413",
-    "viewed": 67,
+    "viewed": 101,
     "name": "fake shadow cone?",
     "username": "jakel101",
     "description": "getting practice in by writing shaders purely from my head of some ideas.",
-    "likes": 2,
+    "likes": 3,
     "published": 3,
     "flags": 0,
     "usePreview": 0,
@@ -16,7 +16,7 @@
       "shadow"
     ],
     "hasliked": 0,
-    "retrieved": "2024-12-21T00:08:28.822842+00:00"
+    "retrieved": "2025-06-05T23:49:51.807010+00:00"
   },
   "renderpass": [
     {

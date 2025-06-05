@@ -3,7 +3,7 @@
   "info": {
     "id": "XcVSzK",
     "date": "1715461690",
-    "viewed": 82,
+    "viewed": 98,
     "name": "Wug by Copilot-Chat",
     "username": "jakel101",
     "description": "Fork of https://www.shadertoy.com/view/McVXWW where I used the Copilot-Chat model to replace the sdWug function. conversation not available. I made a few changes to paste it correctly\n\nColor changed for a presentation",
@@ -17,7 +17,7 @@
       "wug"
     ],
     "hasliked": 0,
-    "retrieved": "2024-12-21T00:08:28.822842+00:00"
+    "retrieved": "2025-06-05T23:49:51.807010+00:00"
   },
   "renderpass": [
     {

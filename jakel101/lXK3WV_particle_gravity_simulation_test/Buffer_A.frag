@@ -24,11 +24,17 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     }
     
     //mouse attractor, with a factor, only active when mouse is held down
-    vel += (m-pos) * ATTRACT * max(0.0,sign(iMouse.z));   
-    
+    // F = G((m1*m2)/(r^2)) // ATTRACT is out G constant, masses are just 1
+    vel += (m-pos)* (1.0)/pow(length(m-pos),2.0) * ATTRACT * max(0.0,sign(iMouse.z));
+        
     // add gravity
     vel.y -= GRAVITY * (pos.y+1.0);
     
+    // trying to "hold" the ball
+    //if (length(m-pos) <= RADIUS && iMouse.z > 0.0) {
+        //vel=vec2(0.0);
+        //pos=m;//TODO: this loses the ball on release    
+    //}
         
     // move to next position
     vec2 new_pos = pos + vel * iTimeDelta * SIM_SPEED;

@@ -3,7 +3,7 @@
   "info": {
     "id": "lXf3Ws",
     "date": "1708037702",
-    "viewed": 147,
+    "viewed": 204,
     "name": "sampler as function paramter",
     "username": "jakel101",
     "description": "GLSL allows you to use a sampler as function parameter. This seems to currently lead to and issue with wgpu.",
@@ -15,7 +15,7 @@
       "test"
     ],
     "hasliked": 0,
-    "retrieved": "2024-12-21T00:08:28.822842+00:00"
+    "retrieved": "2025-06-05T23:49:51.807010+00:00"
   },
   "renderpass": [
     {

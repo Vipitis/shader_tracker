@@ -3,7 +3,7 @@
   "info": {
     "id": "4cKXRK",
     "date": "1715459313",
-    "viewed": 61,
+    "viewed": 76,
     "name": "Wug by Llama3-70B-instruct",
     "username": "jakel101",
     "description": "Fork of https://www.shadertoy.com/view/McVXWW where I used the llama3-70B-instruct to replace the sdWug function. conversation: https://hf.co/chat/r/gJgP-q0 I made some minor edits to paste it correctly.\n\nColor changed for a presentation",
@@ -17,7 +17,7 @@
       "wug"
     ],
     "hasliked": 0,
-    "retrieved": "2024-12-21T00:08:28.822842+00:00"
+    "retrieved": "2025-06-05T23:49:51.807010+00:00"
   },
   "renderpass": [
     {

@@ -2,7 +2,7 @@
 
 # define SIM_SPEED 20.0
 # define GRAVITY 0.01
-# define ATTRACT 0.02
+# define ATTRACT 0.0005
 # define RADIUS 0.1
 # define WIDTH 1.6
 # define HEIGHT 1.0
