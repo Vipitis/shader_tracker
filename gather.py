@@ -5,6 +5,12 @@ import os
 import requests
 from tqdm.auto import tqdm
 from wgpu_shadertoy.api import _get_api_key, shadertoy_from_id
+import argparse
+
+arg_parser = argparse.ArgumentParser(description="Gather Shadertoy shaders to update")
+arg_parser.add_argument("--lookback", type=int, default=2, help="Number of consecutive shaders that must be different to stop gathering new shaders")
+
+
 
 USER_NAME = "jakel101"  # maybe let the user configure this somehow?
 HEADERS = {"user-agent": "https://github.com/vipitis/shader-tracker script"}
@@ -45,6 +51,8 @@ def get_local_shaders(user_name:str) -> dict[str, dict]:
     return local_shaders
 
 if __name__ == "__main__":
+    args = arg_parser.parse_args()
+
     retrieval_time = datetime.datetime.now(datetime.timezone.utc).isoformat()
     shader_ids = get_users_shader_ids(USER_NAME)
     # TODO verbosity flag?
@@ -62,7 +70,7 @@ if __name__ == "__main__":
     same_count = 0
     updated_ids = set()
     for shader_id in tqdm(shader_ids):
-        if same_count >= 2: # TODO: extract this value to arg
+        if same_count >= args.lookback:
             # TODO: might be unsorted if there is a larger gap? ( I need a repeatable test case for this...)
             all_data = all_data + [{"Shader":s} for i,s in local_shaders.items() if i not in updated_ids] # inline extend to prepend?
             break
