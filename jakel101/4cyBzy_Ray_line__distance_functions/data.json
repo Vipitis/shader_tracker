@@ -3,7 +3,7 @@
   "info": {
     "id": "4cyBzy",
     "date": "1734198534",
-    "viewed": 96,
+    "viewed": 98,
     "name": "Ray(line) distance functions",
     "username": "jakel101",
     "description": "mostly figuring this out myself, but pen and paper and some references help.\n\nDirected ray has an origin and direction. I use a single float as the direction in radians (but a point or vector would also work), 0 is top.",
@@ -17,7 +17,7 @@
       "distance"
     ],
     "hasliked": 0,
-    "retrieved": "2025-06-05T23:49:51.807010+00:00"
+    "retrieved": "2025-06-07T00:17:06.990849+00:00"
   },
   "renderpass": [
     {

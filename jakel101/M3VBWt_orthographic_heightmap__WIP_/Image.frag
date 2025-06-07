@@ -6,7 +6,8 @@
 # define CELLS ivec2(iChannelResolution[0].xy)
 
 // unsure yet where to bring this!
-# define SUN normalize(vec3(sin(iDate.w), cos(iTime), 0.25))
+# define SUN normalize(vec3(3.0, 4.0, 2.0))
+//normalize(vec3(sin(iDate.w), cos(iTime), 0.25))
 
 
 ivec2 worldToCell(vec3 p) {
@@ -36,7 +37,11 @@ vec2 cellToWorld(ivec2 current_cell,  vec2 dirs){
     
 }
 
-vec3 AABB(vec3 center, vec3 extend, vec3 ro, vec3 rd){        
+vec4 AABB(vec3 center, vec3 extend, vec3 ro, vec3 rd){        
+    // miss is found by checking rear_hit > front_hit
+    // .zw contains information about the entry/exit 1: +x, -1: -x, 2: +y, -2: -y, 3: +z, -3: -z??
+    // you can do norm[abs(int(box_hit.z))-1] = sign(box_hit.z);
+    
     // extend goes both ways! (size)
     vec3 front = center + sign(-rd)*extend; 
     vec3 rear = center + sign(rd)*extend; 
@@ -45,23 +50,45 @@ vec3 AABB(vec3 center, vec3 extend, vec3 ro, vec3 rd){
     vec3 front_dist = (front-ro)/rd;
     vec3 rear_dist = (rear-ro)/rd;
     
-    // TODO: turn into massive if/else if/else blocks for the direction info?
-    float front_hit = max(max(front_dist.x, front_dist.y), front_dist.z); // front 
-    float rear_hit = min(min(rear_dist.x, rear_dist.y), rear_dist.z);
-    vec3 res = vec3(front_hit, rear_hit, 0.0);    
-    if (front_hit > rear_hit){
-        // TODO: encode this information otherwise
-        res.x = -1.0;
-        res.y = -1.0;
+    // TODO: turn into massive if/else if/else blocks for the direction info? (is there argmax?)
+    float front_hit;//= max(max(front_dist.x, front_dist.y), front_dist.z); // front
+    float front_dir;
+    if (front_dist.x > front_dist.y && front_dist.x > front_dist.z){
+        front_hit = front_dist.x;
+        front_dir = 1.0 * sign(rd.x);
     }
-    // TODO: encode hit side/normal in .z and .w
+    else if (front_dist.y > front_dist.x && front_dist.y > front_dist.z) {
+        front_hit = front_dist.y;
+        front_dir = 2.0 * sign(rd.y);
+    }
+    else {
+        front_hit = front_dist.z;
+        front_dir = 3.0 * sign(rd.z);
+    }
+    
+    float rear_hit;// = min(min(rear_dist.x, rear_dist.y), rear_dist.z);
+    float rear_dir;
+    if (rear_dist.x < rear_dist.y && rear_dist.x < rear_dist.z){
+        rear_hit = rear_dist.x;
+        rear_dir = 1.0 * sign(rd.x);
+    }
+    else if (rear_dist.y < rear_dist.x && rear_dist.y < rear_dist.z) {
+        rear_hit = rear_dist.y;
+        rear_dir = 2.0 * sign(rd.y);
+    }
+    else {
+        rear_hit = rear_dist.z;
+        rear_dir = 3.0 * sign(rd.z);
+    }
+    
+    vec4 res = vec4(front_hit, rear_hit, front_dir, rear_dir);    
     return res;
 }
 
-vec3 pillar_hits(ivec2 cell, float height, vec3 ro, vec3 rd){
+vec4 pillar_hits(ivec2 cell, float height, vec3 ro, vec3 rd){
     // returns the front and rear distance
     // if both values are negative it's a miss
-    // .zw contains information about the entry/exit 0: +x, 1: -x, 2: +y, 3: -y, 4: +z, 5: -z??
+    
     
     // let's move the pillar into world space by having it's center + extends    
     vec3 extend = vec3(1.0/vec2(CELLS), height*0.5);
@@ -70,7 +97,7 @@ vec3 pillar_hits(ivec2 cell, float height, vec3 ro, vec3 rd){
     p.xy *= 2.0;
     p.xy -= 1.0 - extend.xy; // not quite the offset?
     // TODO: redo this math when less asleep...
-    vec3 res = AABB(p, extend, ro, rd);
+    vec4 res = AABB(p, extend, ro, rd);
     return res;
 }
 
@@ -88,74 +115,68 @@ vec4 sampleHeight(ivec2 cell){
     return res;
 }
 
-vec3 sampleGround(vec3 ro, vec3 rd){
-    // for any ray that misses the heightmap
-    float ground_height = 0.0;
-    float ground_dist = (ground_height-ro.z)/rd.z;
-    vec3 ground_hit = ro + rd * ground_dist;
-    
-    vec3 col = vec3(fract(ground_hit.xy), ground_dist);
-    
-    // temporary test
-    vec3 sun_angle = SUN;
-    // simple cast to a plane at x=1 (for now)
-    vec3 sun_dist = (vec3(sign(sun_angle.xy)*-1.0, 1.0)-ground_hit)/sun_angle;
-    float closest = max(sun_dist.x, sun_dist.y);
-    vec3 edge_intersect = ground_hit + sun_angle * closest;
-    float shadow = .8;
-    float edge_height = sampleHeight(worldToCell(edge_intersect)).a;
-    if (edge_intersect.z < edge_height && abs(max(edge_intersect.x, edge_intersect.y)) < 1.0) {
-        shadow = 0.2;
-        //TODO: this needs to go further if above untill we leave the top of the box....
-    }
-    // if this is negative we missed the whole block
-    if (closest < 0.0) shadow = 0.8;
-    
-    
-    col.rgb *= shadow;
-    return col;
-}
-
 vec4 raycast(vec3 ro, vec3 rd){
     // cast the ray untill there is a hit or we exit the box
     // "any hit" shader?
     // returns tex + dist
     
-    vec3 box_hit = AABB(vec3(0.0, 0.0, HEIGHT_SCALE*0.5), vec3(1.0, 1.0, HEIGHT_SCALE*0.5), ro, rd);
-    // miss
-    if ( box_hit.x < 0.0 && box_hit.y < 0.0){
+    vec4 box_hit = AABB(vec3(0.0, 0.0, HEIGHT_SCALE*0.5), vec3(1.0, 1.0, HEIGHT_SCALE*0.5), ro, rd);
+    
+    // miss or "inside" -.- TODO: got to figure out a better  check with normals maybe!
+    if (box_hit.x > box_hit.y){
         // likely sample round here
-        return vec4(sampleGround(ro, rd).rgb, -1.0);
-    }        
-    vec3 entry;
-    entry = ro + (rd*box_hit.x);
-    int i;
-    int max_depth = (CELLS.x + CELLS.y)+2; // could also be min!    
-    for (i = 0; i < max_depth; i++){
-        ivec2 current_cell = worldToCell(entry); // TODO: this one is problematic!
-        vec4 tex = sampleHeight(current_cell);
-        vec3 hit = pillar_hits(current_cell, HEIGHT_SCALE, ro, rd);
-        // miss to the sides -shouldn't happen!?
-        vec3 exit = ro + (rd * hit.y);        
-        if ( hit.x < 0.0 && hit.y < 0.0){
-            //return vec4(tex.a);            
-        }
-        
-        else if (exit.z > tex.a) {
-            // top miss -> continues   (breaks shadows!)         
-        }                
-        else {
-            // must be hit side here!            
-            return vec4(tex.rgb, hit.x);
-        }
-        
-        //return entry.rgbb;
-        exit += rd*0.001; // nudge needed to step into new cell from exit pos!
-        entry = exit;
+        return vec4(vec3(0.2), -box_hit.y);
     }
     
-    // defualt "miss"?
-    return vec4(sampleGround(ro, rd).rgb, -1.0);
+    vec3 entry;
+    entry = ro + rd*(max(-0.001, box_hit.x)); // should be start "inside" the box
+    ivec2 current_cell = worldToCell(entry); // TODO: this one is problematic!
+    int i;
+    int max_depth = (CELLS.x + CELLS.y)+2; // could also be min!
+    for (i = 0; i < max_depth; i++){        
+        if (current_cell.x < 0 || current_cell.x >= CELLS.x ||
+            current_cell.y < 0 || current_cell.y >= CELLS.y) {
+            // we marched far enough are are "outside the box" now!
+            return vec4(vec3(0.4), -abs(box_hit.y));
+        }        
+        vec4 tex = sampleHeight(current_cell);
+        vec4 hit = pillar_hits(current_cell, tex.a, ro, rd);
+        
+        
+        
+        if (hit.x <= hit.y){
+            // "any hit" (side/top)
+            //return vec4(vec2(current_cell).xyxy/10.0);
+            return vec4(tex.rgb, abs(hit.x));
+        }
+        else if (hit.x < 0.0) {
+            // we are somehow "inside" the pillar
+            return vec4(vec3(0.6), -1.0);
+        }
+        
+        
+        // even in a miss, the rear still is useful
+        vec3 exit = ro + (rd * hit.y);
+        if (exit.z > HEIGHT_SCALE){
+            //sky exit?
+            return vec4(0.98, 0.821, 0.75, -abs(box_hit.y));
+        }
+        
+        vec3 exit_norm = vec3(0.0);
+        exit_norm[abs(int(hit.w))-1] = sign(hit.w);
+        
+        if (abs(exit_norm.z) > 0.0){
+            //basically this is a "top" exit, we aren't stepping further anymore. (on the shadow dir)
+            // TODO: think about what this means!
+            //return vec4(0.98, 0.821, 0.75, abs(box_hit.y));
+        }
+        
+        // the step?
+        current_cell += ivec2(exit_norm.xy);        
+    }
+    //return vec4(vec2(current_cell)/vec2(CELLS), 0.0, 0.0);
+    // defualt "miss"? -> like we exit the box?
+    return vec4(vec3(1.0), -abs(box_hit.y));
 
 }
 
@@ -164,17 +185,27 @@ float shadow(vec3 ro, vec3 rd){
     // we are now marching upwards from some hit
     // ro is essentially the point we started from
     // rd is the sun angle
-    
-    vec4 res = raycast(ro, rd);
-    
-    // likely means outside the box/ground!
-    if (res.a < 0.0){
+    vec4 res = raycast(ro, normalize(rd));
+    //return res.a;
+    if (res.a < 0.0){// || (ro + rd*res.a).z >= HEIGHT_SCALE){
+        // likely means outside the box/ground!
         return 0.0;
-    }
+    }    
     else {
         return 0.5;
     }
-}    
+}
+
+vec4 sampleGround(vec3 ro, vec3 rd){
+    // for any ray that misses the heightmap
+    float ground_height = 0.0;
+    float ground_dist = (ground_height-ro.z)/rd.z;
+    vec3 ground_hit = ro + (rd * ground_dist);
+    
+    vec3 col = vec3(fract(ground_hit.xy), -ground_dist);
+    return vec4(col, ground_dist);
+}
+
 
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
@@ -202,7 +233,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     // the camera is always looking "at" the origin
     vec3 look_dir = vec3(0.0, 0.0, HEIGHT_SCALE*0.5) - camera_pos;
     
-    camera_pos += look_dir * -1.0; // moving the camera "back" to avoid occlusions?
+    camera_pos += look_dir * -5.0; // moving the camera "back" to avoid occlusions?
     // two vectors orthogonal to this camera direction (tagents?)    
     //vec3 look_u = camera_pos + vec3(-sin(azimuth), cos(azimuth), 0.0);
     //vec3 look_v = camera_pos + vec3(sin(altitude)*-cos(azimuth), sin(altitude)*-sin(azimuth), cos(altitude));    
@@ -219,11 +250,15 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     
     // actual stuff happening:
     vec4 res = raycast(camera_plane, look_dir);
-    vec3 hit = camera_plane + look_dir*res.a;    
-    float shadow_amt = shadow(hit, SUN);    
+    if (res.a < 0.0) {
+        res = sampleGround(camera_plane, look_dir);
+    }
+    vec3 hit = camera_plane + (look_dir*res.a);
+    vec3 ref = raycast(hit, SUN).rgb;
     
-    vec3 col = res.rgb - shadow_amt;
+    float shadow_amt = shadow(hit, SUN);
     
+    vec3 col = res.rgb - shadow_amt;    
     
     
     fragColor = vec4(vec3(col),1.0);
