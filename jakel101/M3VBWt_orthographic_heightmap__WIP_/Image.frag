@@ -6,8 +6,8 @@
 # define CELLS ivec2(iChannelResolution[0].xy)
 
 // unsure yet where to bring this!
-# define SUN normalize(vec3(3.0, 4.0, 2.0))
-//normalize(vec3(sin(iDate.w), cos(iTime), 0.25))
+# define SUN normalize(vec3(sin(iDate.w*0.5), cos(iTime), 0.25))
+// normalize(vec3(3.0, -5.0, 2.0))
 
 
 ivec2 worldToCell(vec3 p) {
@@ -65,6 +65,8 @@ vec4 AABB(vec3 center, vec3 extend, vec3 ro, vec3 rd){
         front_hit = front_dist.z;
         front_dir = 3.0 * sign(rd.z);
     }
+    // in case of ro being inside the box, the front_dir normal still needs to point away from center.
+    front_dir *= sign(front_hit); 
     
     float rear_hit;// = min(min(rear_dist.x, rear_dist.y), rear_dist.z);
     float rear_dir;
@@ -108,9 +110,10 @@ vec4 sampleHeight(ivec2 cell){
     //cell.x = (cell.x + iFrame) % int(iChannelResolution[0].x); // fun texture scroll
     vec4 tex = texelFetch(iChannel0, cell, 0);
     vec4 res;
-    res.a = (tex.a + tex.r + tex.g)/3.0;
-    res.rgb = tex.rgb; // * res.a // to make it more of a "height" map?
+    res.a = (tex.r + tex.g + tex.b)/3.0;
+    res.rgb = tex.rgb; // * res.a; // to make it more of a "height" map?
     //res.rgb = vec3(0.5);
+    //res.a = tex.a; // use existing height data?
     res.a *= HEIGHT_SCALE;
     return res;
 }
@@ -119,17 +122,29 @@ vec4 raycast(vec3 ro, vec3 rd){
     // cast the ray untill there is a hit or we exit the box
     // "any hit" shader?
     // returns tex + dist
-    
     vec4 box_hit = AABB(vec3(0.0, 0.0, HEIGHT_SCALE*0.5), vec3(1.0, 1.0, HEIGHT_SCALE*0.5), ro, rd);
     
     // miss or "inside" -.- TODO: got to figure out a better  check with normals maybe!
-    if (box_hit.x > box_hit.y){
-        // likely sample round here
-        return vec4(vec3(0.2), -box_hit.y);
+    vec3 entry_norm = vec3(0.0);
+    entry_norm[abs(int(box_hit.z))-1] = sign(box_hit.z);
+    if ((box_hit.x > box_hit.y)){// && dot(rd, entry_norm) >= 0.0){
+        // if we "MISS" the whole box (not inside).
+        //return vec4(entry_norm+vec3(0.5)*1.1, -1.0);
+        return vec4(vec3(0.2), -abs(box_hit.y));
+    }
+    else if (box_hit.x < 0.0){
+        ro += rd* 0.0002; // so we avoid being "inside" a pillar early?
+        // we are inside because the entry is behind the ro!
+        //return vec4(vec3(rd), -1.0);
+        //return vec4(vec3(ro), -1.0);
+        //return vec4(entry_norm+vec3(0.5), 1.0);
+        //return vec4(vec3(0.2, 0.0, 0.8), -abs(box_hit.y));
     }
     
+    //return vec4(vec3(0.6), 1.0);
+    
     vec3 entry;
-    entry = ro + rd*(max(-0.001, box_hit.x)); // should be start "inside" the box
+    entry = ro + rd*(box_hit.x); // should be start "inside" the box
     ivec2 current_cell = worldToCell(entry); // TODO: this one is problematic!
     int i;
     int max_depth = (CELLS.x + CELLS.y)+2; // could also be min!
@@ -142,37 +157,52 @@ vec4 raycast(vec3 ro, vec3 rd){
         vec4 tex = sampleHeight(current_cell);
         vec4 hit = pillar_hits(current_cell, tex.a, ro, rd);
         
+        vec3 entry_norm = vec3(0.0);
+        entry_norm[abs(int(hit.z))-1] = sign(hit.z);
         
         
-        if (hit.x <= hit.y){
-            // "any hit" (side/top)
-            //return vec4(vec2(current_cell).xyxy/10.0);
-            return vec4(tex.rgb, abs(hit.x));
-        }
-        else if (hit.x < 0.0) {
-            // we are somehow "inside" the pillar
-            return vec4(vec3(0.6), -1.0);
-        }
-        
-        
-        // even in a miss, the rear still is useful
         vec3 exit = ro + (rd * hit.y);
-        if (exit.z > HEIGHT_SCALE){
-            //sky exit?
-            return vec4(0.98, 0.821, 0.75, -abs(box_hit.y));
-        }
-        
         vec3 exit_norm = vec3(0.0);
-        exit_norm[abs(int(hit.w))-1] = sign(hit.w);
+        exit_norm[abs(int(hit.w))-1] = sign(hit.w);                
+        
+        if (hit.x < 0.0 && hit.y < 0.0) {
+            // the current cell is "behind" us, we basically miss
+            
+            //return vec4(vec2(current_cell).xyx/10.0, -abs(hit.x));
+            //return vec4(vec3(hit.y)+0.5, -1.0);
+            //return vec4(exit, -1.0);
+            //return vec4(entry, -1.0);
+            //return vec4(vec3(0.6), -1.0);
+            //return vec4(hit);
+            //return vec4(exit_norm+vec3(0.5), 1.0);            
+            //continue; // jumps ahead in the loop!
+        }
+        else if ((hit.x <= hit.y) && (dot(rd, entry_norm) >= 0.0)){
+            // "any hit" (side/top)
+            //return vec4(vec2(current_cell).xyx/10.0, abs(hit.x));
+            //return vec4(vec3(hit.x), abs(hit.x));
+            
+            // do a little bit of light sim by doing diffuse "block of chalk"
+            vec3 col = tex.rgb;
+            col *= (2.0*max(0.0, dot(entry_norm, -SUN))) + 0.2; // "ambient" term
+            
+            return vec4(col, abs(hit.x));
+        }        
         
         if (abs(exit_norm.z) > 0.0){
             //basically this is a "top" exit, we aren't stepping further anymore. (on the shadow dir)
             // TODO: think about what this means!
-            //return vec4(0.98, 0.821, 0.75, abs(box_hit.y));
+            //return vec4(0.98, 0.821, 0.75, -abs(box_hit.y));
         }
         
-        // the step?
-        current_cell += ivec2(exit_norm.xy);        
+        // the step? ( needs to be rethought for shadow direction having an up exit at times!
+        ivec2 next_cell = current_cell + ivec2(exit_norm.xy);
+        if (next_cell == current_cell){
+            next_cell += ivec2(0,-1);
+            //return vec4(vec3(0.8), -1.0);
+        }
+        //current_cell += ivec2(exit_norm.xy); // could be 0.0 if the norm is Z direction...
+        current_cell = next_cell;
     }
     //return vec4(vec2(current_cell)/vec2(CELLS), 0.0, 0.0);
     // defualt "miss"? -> like we exit the box?
@@ -215,7 +245,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     vec2 mo = (2.0*iMouse.xy - iResolution.xy)/iResolution.y;
     
     // for when it's just idling...   
-    float azimuth = iTime*0.15 + mo.x;
+    float azimuth = iTime*0.15 + mo.x; // keeps a bit of residue of the mouse!
     float altitude = 0.7+cos(iTime*0.4)*0.15;      
     if (sign(iMouse.z) > 0.0){
         // orbiting camera setup
@@ -231,7 +261,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         sin(azimuth)*cos(altitude),
         sin(altitude));    
     // the camera is always looking "at" the origin
-    vec3 look_dir = vec3(0.0, 0.0, HEIGHT_SCALE*0.5) - camera_pos;
+    vec3 look_dir = normalize(vec3(0.0, 0.0, HEIGHT_SCALE*0.5) - camera_pos);
     
     camera_pos += look_dir * -5.0; // moving the camera "back" to avoid occlusions?
     // two vectors orthogonal to this camera direction (tagents?)    
@@ -254,12 +284,12 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         res = sampleGround(camera_plane, look_dir);
     }
     vec3 hit = camera_plane + (look_dir*res.a);
-    vec3 ref = raycast(hit, SUN).rgb;
+    vec4 ref = raycast(hit, SUN).rgba;
     
     float shadow_amt = shadow(hit, SUN);
     
     vec3 col = res.rgb - shadow_amt;    
     
     
-    fragColor = vec4(vec3(col),1.0);
+    fragColor = vec4(vec3(uv.x > 0.0 ? col.rgb : col.rgb),1.0);
 }

@@ -3,7 +3,7 @@
   "info": {
     "id": "XXdyRn",
     "date": "1734642443",
-    "viewed": 78,
+    "viewed": 79,
     "name": "operator precedence: << and + ",
     "username": "jakel101",
     "description": "so what do you see? and what is correct according to the spec? https://registry.khronos.org/OpenGL/specs/es/3.0/GLSL_ES_Specification_3.00.pdf 5.1 Operator precedence has addition above bitwise shift\ncorrect should be bot left like top left/right?",
@@ -16,7 +16,7 @@
       "bug"
     ],
     "hasliked": 0,
-    "retrieved": "2025-06-07T00:17:06.990849+00:00"
+    "retrieved": "2025-06-16T23:02:37.739542+00:00"
   },
   "renderpass": [
     {
