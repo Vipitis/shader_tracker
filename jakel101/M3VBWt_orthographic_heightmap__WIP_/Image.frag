@@ -6,7 +6,7 @@
 # define CELLS ivec2(iChannelResolution[0].xy)
 
 // unsure yet where to bring this!
-# define SUN normalize(vec3(sin(iDate.w*0.5), cos(iTime), 0.25))
+# define SUN normalize(vec3(sin(iDate.w*0.5), cos(iTime), HEIGHT_SCALE*1.5))
 // normalize(vec3(3.0, -5.0, 2.0))
 
 
@@ -184,6 +184,8 @@ vec4 raycast(vec3 ro, vec3 rd){
             
             // do a little bit of light sim by doing diffuse "block of chalk"
             vec3 col = tex.rgb;
+            
+            // half the phong diffuse
             col *= (2.0*max(0.0, dot(entry_norm, -SUN))) + 0.2; // "ambient" term
             
             return vec4(col, abs(hit.x));
@@ -195,13 +197,18 @@ vec4 raycast(vec3 ro, vec3 rd){
             //return vec4(0.98, 0.821, 0.75, -abs(box_hit.y));
         }
         
-        // the step? ( needs to be rethought for shadow direction having an up exit at times!
+        // the step
         ivec2 next_cell = current_cell + ivec2(exit_norm.xy);
         if (next_cell == current_cell){
-            next_cell += ivec2(0,-1);
-            //return vec4(vec3(0.8), -1.0);
+            // in this case we do another raycast - but without any Z component
+            // so the vector is sideways and points to a new cell!
+            hit = pillar_hits(current_cell, 1.0, ro, normalize(vec3(rd.xy, 0.0)));
+            exit_norm = vec3(0.0); // has to be reset
+            exit_norm[abs(int(hit.w))-1] = sign(hit.w);
+            
+            next_cell += ivec2(exit_norm.xy);
         }
-        //current_cell += ivec2(exit_norm.xy); // could be 0.0 if the norm is Z direction...
+        // for next iteration
         current_cell = next_cell;
     }
     //return vec4(vec2(current_cell)/vec2(CELLS), 0.0, 0.0);
@@ -219,7 +226,7 @@ float shadow(vec3 ro, vec3 rd){
     //return res.a;
     if (res.a < 0.0){// || (ro + rd*res.a).z >= HEIGHT_SCALE){
         // likely means outside the box/ground!
-        return 0.0;
+        return 1.0;
     }    
     else {
         return 0.5;
@@ -288,8 +295,9 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     
     float shadow_amt = shadow(hit, SUN);
     
-    vec3 col = res.rgb - shadow_amt;    
+    vec3 col = res.rgb * shadow_amt;    
     
+    // col = vec3(uv.x > 0.0 ? col.rgb : col.rgb);
     
-    fragColor = vec4(vec3(uv.x > 0.0 ? col.rgb : col.rgb),1.0);
+    fragColor = vec4(vec3(col),1.0);
 }
