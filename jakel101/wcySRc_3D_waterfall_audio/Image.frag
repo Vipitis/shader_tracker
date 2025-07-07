@@ -12,12 +12,15 @@
 # define HEIGHT_SCALE 0.4
 
 // resolution of the sampled area limit Y to some number smaller than iResolution.y to change the "speed"
-# define CELLS ivec2(iChannelResolution[0].x, 512)
+# define CELLS ivec2(iChannelResolution[0].x, min(iChannelResolution[0].y,512.0))
 
 // unsure yet where to bring this!
 # define SUN normalize(vec3(sin(iDate.w*0.5), cos(iTime), HEIGHT_SCALE*1.5))
 // normalize(vec3(3.0, -5.0, 2.0))
 
+// in progress!
+// horizontal FOV, if you use negative values the camera will be orthographic!
+# define FOV 90.0
 
 ivec2 worldToCell(vec3 p) {
     
@@ -175,7 +178,9 @@ vec4 raycast(vec3 ro, vec3 rd){
             vec3 col = tex.rgb;
             
             // half the phong diffuse
-            col *= (2.0*max(0.0, dot(entry_norm, -SUN))) + 0.2; // "ambient" term
+            // TODO: assume some base "emissive" quality to all pillars (or scaled with some value?)
+            // needs better hit model and shader to accumulate over a few traces.
+            col *= (2.0*dot(entry_norm, -SUN)) + 0.2; // "ambient"/emission term
             
             return vec4(col, abs(hit.x));
         }        
@@ -222,10 +227,10 @@ float shadow(vec3 ro, vec3 rd){
     }
 }
 
-float checkerboard(vec2 uv, float cells){
-    uv *= cells/2.0;
-    float rows = float(mod(uv.y, 1.0) <= 0.5);
-    float cols = float(mod(uv.x, 1.0) <= 0.5);
+float checkerboard(vec2 check_uv, float cells){
+    check_uv *= cells/2.0;
+    float rows = float(mod(check_uv.y, 1.0) <= 0.5);
+    float cols = float(mod(check_uv.x, 1.0) <= 0.5);
     return float(rows == cols);
 }
 
@@ -234,11 +239,20 @@ vec4 sampleGround(vec3 ro, vec3 rd){
     // for any ray that misses the heightmap
     float ground_height = 0.0;
     float ground_dist = (ground_height-ro.z)/rd.z;
+    if (ground_dist < 0.0) {
+        // essentially sky hit instead?
+        // just some random skybox right now... could be improved of course!
+        return vec4(0.98, 0.79, 0.12, ground_dist)*exp(dot(SUN, rd));
+    }
+    
     vec3 ground_hit = ro + (rd * ground_dist);
         
     float val = checkerboard(ground_hit.xy, 8.0)* 0.1;
     val += 0.45;
-    val *= 2.0 - length(abs(ground_hit));
+    //val *= 2.0 - length(abs(ground_hit));
+    
+    // fake sun angle spotlight... TODO actual angle and normal calculation!
+    val *= 2.5 - min(2.3, length((-SUN-ground_hit)));//,vec3(0.0,0.0,1.0));
     
     vec3 col = vec3(val);
     return vec4(col, ground_dist);
@@ -267,14 +281,15 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     // make sure you don't look "below"
     altitude = clamp(altitude, HEIGHT_SCALE, PI);
     
+    // a unit length orbit!
     vec3 camera_pos = vec3(
         cos(azimuth)*cos(altitude),
         sin(azimuth)*cos(altitude),
         sin(altitude));    
-    // the camera is always looking "at" the origin
+    // the camera is always looking "at" the origin or half way above it
     vec3 look_dir = normalize(vec3(0.0, 0.0, HEIGHT_SCALE*0.5) - camera_pos);
     
-    camera_pos += look_dir * -5.0; // moving the camera "back" to avoid occlusions?
+    //camera_pos += look_dir * -1.0; // moving the camera "back" to avoid occlusions?
     // two vectors orthogonal to this camera direction (tagents?)    
     //vec3 look_u = camera_pos + vec3(-sin(azimuth), cos(azimuth), 0.0);
     //vec3 look_v = camera_pos + vec3(sin(altitude)*-cos(azimuth), sin(altitude)*-sin(azimuth), cos(altitude));    
@@ -284,10 +299,19 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     vec3 look_v = normalize(cross(camera_pos, look_u)); // is this faster?
     // camera plane(origin of each pixel) -> barycentric?
     
+    
+    
     // orthographic zoom just makes the sensor smaller
     float zoom = clamp(1.0 + cos(iTime*0.3)*0.3, 0.05, 1.5);
     vec3 camera_plane = camera_pos + (look_u*uv.x)*zoom + (look_v*uv.y)*zoom; // wider fov = larger "sensor"    
-        
+    
+    if (FOV > 0.0){
+        // for perspective camera we move the actual ro further back?
+        // TODO the actual calculation for h fov and make the plane be at the camera_pos not infront of it!
+        camera_plane = camera_pos - look_dir; // now 2 units away from the center?
+        look_dir += look_u*uv.x + look_v*uv.y;
+        look_dir = normalize(look_dir);
+    }
     
     // actual stuff happening:
     vec4 res = raycast(camera_plane, look_dir);
@@ -295,13 +319,16 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         res = sampleGround(camera_plane, look_dir);
     }
     vec3 hit = camera_plane + (look_dir*res.a);
-    vec4 ref = raycast(hit, SUN).rgba;
+    vec4 ref = raycast(hit, SUN).rgba; //reflection (the full shadow)    
+    ref.rgb *= 1.0 - step(0.0, ref.a); // this makes misses black?
     
     float shadow_amt = shadow(hit, SUN);
     
-    vec3 col = res.rgb * shadow_amt;    
+    vec3 col = res.rgb * shadow_amt;
     
-    // col = vec3(uv.x > 0.0 ? col.rgb : col.rgb);
+    // TODO: better "shadow" value via actually colored shadow??
+    // vec3 col2 = res.rgb + ref.rgb*0.3;    
+    // col = vec3(uv.x > 0.0 ? col.rgb : col2.rgb);
     
     fragColor = vec4(vec3(col),1.0);
 }

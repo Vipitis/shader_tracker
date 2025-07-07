@@ -29,7 +29,7 @@ WIP utility to track your public shadertoy shaders in a github repository.
 
 ### how to use:
 ```bash
-python gather.py
+python gather.py --lookback 5
 python sort.py
 ```
 CLI flags: tbd.
