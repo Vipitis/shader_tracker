@@ -1,14 +1,42 @@
-// APache 2.0 no patents \_%_/
+// Apache 2.0 no patents \_%_/
+
+/* Image pass shader to draw a texture/buffer/input as a heightmap
+* with some pathtracing as pillars of pixels.
+* Meant to be used in multiple projects and therefore
+* easily configurable at the top with a few macros
+* 
+* selflink: https://www.shadertoy.com/view/M3VBWt
+* 
+* work in progress:
+* todo(ideas):
+* - monte carlo light simulation
+* - refactor with structs
+* - pysics simulation
+* - point/ball/area lights
+* - infinite/LOD tiles?
+* - DDA like traversal
+* - fix artefacts
+* - cleanup as usual
+* feedback/improvements welcome here or on the original.
+*/
+
+
 # define PI 3.141592653
 # define HEIGHT_SCALE 0.4
 
-// resolution of the sampled area
-# define CELLS ivec2(iChannelResolution[0].xy)
+// resolution of the sampled area limit Y to some number smaller than iResolution.y to change the "speed"
+# define CELLS ivec2(iChannelResolution[0].x, min(iChannelResolution[0].y,512.0))
 
 // unsure yet where to bring this!
 # define SUN normalize(vec3(sin(iDate.w*0.5), cos(iTime), HEIGHT_SCALE*1.5))
 // normalize(vec3(3.0, -5.0, 2.0))
 
+// horizontal FOV, if you use negative values the camera will be orthographic!
+// examples:
+// FOV -1.0 for orthographic (sensor size)
+// FOV 90.0 for perspective wide
+// FOV 45.0 for perspective narower
+# define FOV 90.0
 
 ivec2 worldToCell(vec3 p) {
     
@@ -19,22 +47,6 @@ ivec2 worldToCell(vec3 p) {
     // TODO: find an actual solution to the edge cases!
     st = min(st, CELLS -1);
     return st;
-}
-
-vec2 cellToWorld(ivec2 current_cell,  vec2 dirs){
-    // gives the rear plane of a cell, based on dirs?
-    // TODO: can we avoid this magic epsilon number?
-    // 
-    vec2 p = vec2(current_cell);    
-    p -= min(vec2(0.0),dirs); // the "step"?
-    
-    // scale and shift    
-    p /= vec2(CELLS);
-    p *= 2.0;
-    p -= 1.0;
-    //p = min(p, vec2(1.0));
-    return p;
-    
 }
 
 vec4 AABB(vec3 center, vec3 extend, vec3 ro, vec3 rd){        
@@ -87,11 +99,7 @@ vec4 AABB(vec3 center, vec3 extend, vec3 ro, vec3 rd){
     return res;
 }
 
-vec4 pillar_hits(ivec2 cell, float height, vec3 ro, vec3 rd){
-    // returns the front and rear distance
-    // if both values are negative it's a miss
-    
-    
+vec4 pillar_hits(ivec2 cell, float height, vec3 ro, vec3 rd){    
     // let's move the pillar into world space by having it's center + extends    
     vec3 extend = vec3(1.0/vec2(CELLS), height*0.5);
     vec3 p = vec3(cell.xy, height*0.5);    
@@ -114,14 +122,14 @@ vec4 sampleHeight(ivec2 cell){
     res.rgb = tex.rgb; // * res.a; // to make it more of a "height" map?
     //res.rgb = vec3(0.5);
     //res.a = tex.a; // use existing height data?
-    res.a *= HEIGHT_SCALE;
+    res.a *= HEIGHT_SCALE;    
     return res;
 }
 
 vec4 raycast(vec3 ro, vec3 rd){
     // cast the ray untill there is a hit or we exit the box
     // "any hit" shader?
-    // returns tex + dist
+    // returns tex + dist, negative dist means a "miss"
     vec4 box_hit = AABB(vec3(0.0, 0.0, HEIGHT_SCALE*0.5), vec3(1.0, 1.0, HEIGHT_SCALE*0.5), ro, rd);
     
     // miss or "inside" -.- TODO: got to figure out a better  check with normals maybe!
@@ -186,7 +194,9 @@ vec4 raycast(vec3 ro, vec3 rd){
             vec3 col = tex.rgb;
             
             // half the phong diffuse
-            col *= (2.0*max(0.0, dot(entry_norm, -SUN))) + 0.2; // "ambient" term
+            // TODO: assume some base "emissive" quality to all pillars (or scaled with some value?)
+            // needs better hit model and shader to accumulate over a few traces.
+            col *= (2.0*dot(entry_norm, -SUN)) + 0.2; // "ambient"/emission term
             
             return vec4(col, abs(hit.x));
         }        
@@ -233,13 +243,34 @@ float shadow(vec3 ro, vec3 rd){
     }
 }
 
+float checkerboard(vec2 check_uv, float cells){
+    check_uv *= cells/2.0;
+    float rows = float(mod(check_uv.y, 1.0) <= 0.5);
+    float cols = float(mod(check_uv.x, 1.0) <= 0.5);
+    return float(rows == cols);
+}
+
+
 vec4 sampleGround(vec3 ro, vec3 rd){
     // for any ray that misses the heightmap
     float ground_height = 0.0;
     float ground_dist = (ground_height-ro.z)/rd.z;
-    vec3 ground_hit = ro + (rd * ground_dist);
+    if (ground_dist < 0.0) {
+        // essentially sky hit instead?
+        // just some random skybox right now... could be improved of course!
+        return vec4(0.98, 0.79, 0.12, ground_dist)*exp(dot(SUN, rd));
+    }
     
-    vec3 col = vec3(fract(ground_hit.xy), -ground_dist);
+    vec3 ground_hit = ro + (rd * ground_dist);
+        
+    float val = checkerboard(ground_hit.xy, 8.0)* 0.1;
+    val += 0.45;
+    //val *= 2.0 - length(abs(ground_hit));
+    
+    // fake sun angle spotlight... TODO actual angle and normal calculation!
+    val *= 2.5 - min(2.3, length((-SUN-ground_hit)));//,vec3(0.0,0.0,1.0));
+    
+    vec3 col = vec3(val);
     return vec4(col, ground_dist);
 }
 
@@ -250,6 +281,9 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     // uv normalized to [-1..1] for height with more width
     vec2 uv = (2.0*fragCoord - iResolution.xy)/iResolution.y;
     vec2 mo = (2.0*iMouse.xy - iResolution.xy)/iResolution.y;
+    
+    //fragColor = texture(iChannel0, uv);
+    //return;
     
     // for when it's just idling...   
     float azimuth = iTime*0.15 + mo.x; // keeps a bit of residue of the mouse!
@@ -263,14 +297,17 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     // make sure you don't look "below"
     altitude = clamp(altitude, HEIGHT_SCALE, PI);
     
+    // a unit length orbit!
     vec3 camera_pos = vec3(
         cos(azimuth)*cos(altitude),
         sin(azimuth)*cos(altitude),
         sin(altitude));    
-    // the camera is always looking "at" the origin
+    // the camera is always looking "at" the origin or half way above it
     vec3 look_dir = normalize(vec3(0.0, 0.0, HEIGHT_SCALE*0.5) - camera_pos);
     
-    camera_pos += look_dir * -5.0; // moving the camera "back" to avoid occlusions?
+    
+    // TODO moving the camera in and out over time??
+    camera_pos += look_dir * -2.0; // moving the camera "back" to avoid occlusions?
     // two vectors orthogonal to this camera direction (tagents?)    
     //vec3 look_u = camera_pos + vec3(-sin(azimuth), cos(azimuth), 0.0);
     //vec3 look_v = camera_pos + vec3(sin(altitude)*-cos(azimuth), sin(altitude)*-sin(azimuth), cos(altitude));    
@@ -280,24 +317,50 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     vec3 look_v = normalize(cross(camera_pos, look_u)); // is this faster?
     // camera plane(origin of each pixel) -> barycentric?
     
-    // orthographic zoom just makes the sensor smaller
-    float zoom = clamp(1.0 + cos(iTime*0.3), 0.05, 1.5);
-    vec3 camera_plane = camera_pos + (look_u*uv.x)*zoom + (look_v*uv.y)*zoom; // wider fov = larger "sensor"    
+    vec3 camera_plane;
+    vec3 ray_dir;
+                        
+    if (FOV > 0.0){
+        // assume a pinhole camera.
+        // FOV is the horizontal fov, the given focal length becomes:
+        // the 1.0 is the sensor height.
+        float focal_length = 1.0/tan(radians(FOV*0.5));
         
+        // the focal point all rays travel through
+        vec3 pinhole = camera_pos + look_dir*focal_length;
+
+        // the ro
+        camera_plane = camera_pos + ((look_u*uv.x) + (look_v*uv.y))*-1.0; // inverted here to see upright
+        
+        // the rd
+        ray_dir = pinhole-camera_plane;
+        ray_dir = normalize(ray_dir);
+    }
+    
+    else {
+        // negative FOV values are interpreted as a sensor size for a orthographic camera!
+        // horizontal sensor size, -1 would be something sensible... everything else is far away
+        float sensor_size = FOV*0.5*-1.0;
+        camera_plane = camera_pos + ((look_u*uv.x)+(look_v*uv.y))*sensor_size; // wider fov = larger "sensor"
+        ray_dir = look_dir;
+    }
     
     // actual stuff happening:
-    vec4 res = raycast(camera_plane, look_dir);
+    vec4 res = raycast(camera_plane, ray_dir);
     if (res.a < 0.0) {
-        res = sampleGround(camera_plane, look_dir);
+        res = sampleGround(camera_plane, ray_dir);
     }
-    vec3 hit = camera_plane + (look_dir*res.a);
-    vec4 ref = raycast(hit, SUN).rgba;
+    vec3 hit = camera_plane + (ray_dir*res.a);
+    vec4 ref = raycast(hit, SUN).rgba; //reflection (the full shadow)    
+    ref.rgb *= 1.0 - step(0.0, ref.a); // this makes misses black?
     
     float shadow_amt = shadow(hit, SUN);
     
-    vec3 col = res.rgb * shadow_amt;    
+    vec3 col = res.rgb * shadow_amt;
     
-    // col = vec3(uv.x > 0.0 ? col.rgb : col.rgb);
+    // TODO: better "shadow" value via actually colored shadow??
+    // vec3 col2 = res.rgb + ref.rgb*0.3;    
+    // col = vec3(uv.x > 0.0 ? col.rgb : col2.rgb);
     
     fragColor = vec4(vec3(col),1.0);
 }
