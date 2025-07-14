@@ -39,6 +39,9 @@
 // https://discord.com/channels/578696555612209173/578696556069257231/1389206125584449697
 
 
+// just as a joke, we can even define mix by it's implementation
+# define MIX(a,b,x) (a*(1-x) + b*x)
+
 // arithmetic
 # define MUL(a,b) mix(0.0, a, b)
 # define NEG(a) mix(a, 0.0, 2.0)
@@ -61,6 +64,7 @@
 # define FRACT(a) SUB(a,FLOOR(a))
 # define STEP(a,x) float(bool(uint(ADD(SUB(x,a),1.0))))
 // STEP also works as LEQ (less eqaul than) I think
+// NOTICE: uint(-1.0) is undefined behaviour and therefore not the greatest resource
 
 // exapand formulas to vectors where needed.
 # define MUL2(a,b) vec2(MUL(a.x, b.x), MUL(a.y, b.y))

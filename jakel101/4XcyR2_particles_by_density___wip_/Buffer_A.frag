@@ -43,7 +43,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     // only if, and proportional to the direction they are pointing at me
     
     float next_d = density;
-    next_d *= 1.0 - clamp(0.0, INERTIA, length(vel)); // this much "moves away"
+    next_d *= 1.0 - clamp(length(vel), 0.0, INERTIA); // this much "moves away"
     vec2 next_vel = vel; // keep track (start with current I guess).
     float largest_d = 0.0;
     for(int i = -1; i<2; i++){
@@ -83,5 +83,5 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     //next_vel *= 0.99999; //slow down over time to avoid acceleration?        
     
     
-    fragColor = vec4(next_vel, clamp(0.0, 20.0, next_d), 0.0);
+    fragColor = vec4(next_vel.xy, clamp(next_d, 0.0, 20.0), 0.0);
 }

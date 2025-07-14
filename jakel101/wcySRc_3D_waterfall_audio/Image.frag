@@ -106,7 +106,7 @@ vec4 sampleHeight(ivec2 cell){
     res.rgb = tex.rgb; // * res.a; // to make it more of a "height" map?
     //res.rgb = vec3(0.5);
     //res.a = tex.a; // use existing height data?
-    res.a *= HEIGHT_SCALE;
+    res.a *= HEIGHT_SCALE;    
     return res;
 }
 
@@ -289,7 +289,9 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     // the camera is always looking "at" the origin or half way above it
     vec3 look_dir = normalize(vec3(0.0, 0.0, HEIGHT_SCALE*0.5) - camera_pos);
     
-    //camera_pos += look_dir * -1.0; // moving the camera "back" to avoid occlusions?
+    
+    // TODO moving the camera in and out over time??
+    camera_pos += look_dir * -2.0; // moving the camera "back" to avoid occlusions?
     // two vectors orthogonal to this camera direction (tagents?)    
     //vec3 look_u = camera_pos + vec3(-sin(azimuth), cos(azimuth), 0.0);
     //vec3 look_v = camera_pos + vec3(sin(altitude)*-cos(azimuth), sin(altitude)*-sin(azimuth), cos(altitude));    
@@ -299,26 +301,40 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     vec3 look_v = normalize(cross(camera_pos, look_u)); // is this faster?
     // camera plane(origin of each pixel) -> barycentric?
     
-    
-    
-    // orthographic zoom just makes the sensor smaller
-    float zoom = clamp(1.0 + cos(iTime*0.3)*0.3, 0.05, 1.5);
-    vec3 camera_plane = camera_pos + (look_u*uv.x)*zoom + (look_v*uv.y)*zoom; // wider fov = larger "sensor"    
-    
+    vec3 camera_plane;
+    vec3 ray_dir;
+                        
     if (FOV > 0.0){
-        // for perspective camera we move the actual ro further back?
-        // TODO the actual calculation for h fov and make the plane be at the camera_pos not infront of it!
-        camera_plane = camera_pos - look_dir; // now 2 units away from the center?
-        look_dir += look_u*uv.x + look_v*uv.y;
-        look_dir = normalize(look_dir);
+        // assume a pinhole camera.
+        // FOV is the horizontal fov, the given focal length becomes:
+        // the 1.0 is the sensor height.
+        float focal_length = 1.0/tan(radians(FOV*0.5));
+        
+        // the focal point all rays travel through
+        vec3 pinhole = camera_pos + look_dir*focal_length;
+
+        // the ro
+        camera_plane = camera_pos + ((look_u*uv.x) + (look_v*uv.y))*-1.0; // inverted here to see upright
+        
+        // the rd
+        ray_dir = pinhole-camera_plane;
+        ray_dir = normalize(ray_dir);
+    }
+    
+    else {
+        // negative FOV values are interpreted as a sensor size for a orthographic camera!
+        // horizontal sensor size, -1 would be something sensible... everything else is far away
+        float sensor_size = FOV*0.5*-1.0;
+        camera_plane = camera_pos + ((look_u*uv.x)+(look_v*uv.y))*sensor_size; // wider fov = larger "sensor"
+        ray_dir = look_dir;
     }
     
     // actual stuff happening:
-    vec4 res = raycast(camera_plane, look_dir);
+    vec4 res = raycast(camera_plane, ray_dir);
     if (res.a < 0.0) {
-        res = sampleGround(camera_plane, look_dir);
+        res = sampleGround(camera_plane, ray_dir);
     }
-    vec3 hit = camera_plane + (look_dir*res.a);
+    vec3 hit = camera_plane + (ray_dir*res.a);
     vec4 ref = raycast(hit, SUN).rgba; //reflection (the full shadow)    
     ref.rgb *= 1.0 - step(0.0, ref.a); // this makes misses black?
     
