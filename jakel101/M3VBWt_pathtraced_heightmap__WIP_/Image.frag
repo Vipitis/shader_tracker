@@ -106,6 +106,7 @@ vec4 pillar_hits(ivec2 cell, float height, vec3 ro, vec3 rd){
     p.xy *= extend.xy; 
     p.xy *= 2.0;
     p.xy -= 1.0 - extend.xy; // not quite the offset?
+    //extend.z = extend.y; // make them cubes?
     // TODO: redo this math when less asleep...
     vec4 res = AABB(p, extend, ro, rd);
     return res;
@@ -295,7 +296,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     }
     
     // make sure you don't look "below"
-    altitude = clamp(altitude, HEIGHT_SCALE, PI);
+    altitude = clamp(altitude, HEIGHT_SCALE*0.5, PI);
     
     // a unit length orbit!
     vec3 camera_pos = vec3(
@@ -307,7 +308,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     
     
     // TODO moving the camera in and out over time??
-    camera_pos += look_dir * -2.0; // moving the camera "back" to avoid occlusions?
+    camera_pos += look_dir * -1.0; // moving the camera "back" to avoid occlusions?
     // two vectors orthogonal to this camera direction (tagents?)    
     //vec3 look_u = camera_pos + vec3(-sin(azimuth), cos(azimuth), 0.0);
     //vec3 look_v = camera_pos + vec3(sin(altitude)*-cos(azimuth), sin(altitude)*-sin(azimuth), cos(altitude));    
@@ -319,6 +320,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     
     vec3 camera_plane;
     vec3 ray_dir;
+    vec3 ray_origin;
                         
     if (FOV > 0.0){
         // assume a pinhole camera.
@@ -326,15 +328,13 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         // the 1.0 is the sensor height.
         float focal_length = 1.0/tan(radians(FOV*0.5));
         
-        // the focal point all rays travel through
-        vec3 pinhole = camera_pos + look_dir*focal_length;
-
         // the ro
-        camera_plane = camera_pos + ((look_u*uv.x) + (look_v*uv.y))*-1.0; // inverted here to see upright
+        camera_plane = camera_pos - (look_dir*focal_length) + ((look_u*uv.x) + (look_v*uv.y))*-1.0; // inverted here to see upright
+        ray_origin = camera_pos;
         
         // the rd
-        ray_dir = pinhole-camera_plane;
-        ray_dir = normalize(ray_dir);
+        ray_dir = camera_pos-camera_plane;
+        ray_dir = normalize(ray_dir);        
     }
     
     else {
@@ -343,14 +343,15 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         float sensor_size = FOV*0.5*-1.0;
         camera_plane = camera_pos + ((look_u*uv.x)+(look_v*uv.y))*sensor_size; // wider fov = larger "sensor"
         ray_dir = look_dir;
+        ray_origin = camera_plane;
     }
     
     // actual stuff happening:
-    vec4 res = raycast(camera_plane, ray_dir);
+    vec4 res = raycast(ray_origin, ray_dir);
     if (res.a < 0.0) {
-        res = sampleGround(camera_plane, ray_dir);
+        res = sampleGround(ray_origin, ray_dir);
     }
-    vec3 hit = camera_plane + (ray_dir*res.a);
+    vec3 hit = ray_origin + (ray_dir*res.a);
     vec4 ref = raycast(hit, SUN).rgba; //reflection (the full shadow)    
     ref.rgb *= 1.0 - step(0.0, ref.a); // this makes misses black?
     
