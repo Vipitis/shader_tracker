@@ -1,16 +1,22 @@
+// Apache 2.0 no patents [!__!] 
+// this is meant as a effects pass (image pass)
+// where it reads some background and make it look sorta broken
+// improvements and remixes welcome!
+
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     // Normalized pixel coordinates (from 0 to 1)
     vec2 uv = fragCoord/iResolution.xy;
     vec2 mouse_start = abs(iMouse.zw)/iResolution.xy;
     vec2 mouse_end = iMouse.xy/iResolution.xy;
-
-    // "normal area"
-    // Time varying pixel color
-    vec3 good = 0.5 + 0.5*cos(iTime+uv.xyx+vec3(0,2,4));
-    // todo: put something funny as Buffer A maybe
-    good = texture(iChannel0, uv).rgb;
     
+    // default values for before you touch mouse first time!
+    if (iMouse.x == 0.0 && iMouse.z == 0.0){
+        mouse_start = vec2(0.2);
+        mouse_end = vec2(0.2);
+    }
+    
+    // to capture the background, we distor the uv a bit for extra fun
     // disorted uv along the vertical axis
     vec2 distoriton = uv;
     
@@ -24,7 +30,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     float sporadic = min(sin(mod(iTime, 3.4)), 0.0) - min(cos(mod(iTime*.3, 1.6)), 0.0)*sign(cos(iTime*3.0));
     
     distoriton.x += (0.5-uv.y)*sign(sporadic)*0.1;
-    good = texture(iChannel0, distoriton).rgb;
+    vec3 good = texture(iChannel0, distoriton).rgb; // TODO: different name
 
 
     // broken area

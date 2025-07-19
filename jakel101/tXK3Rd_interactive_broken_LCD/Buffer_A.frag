@@ -1,8 +1,12 @@
 // forked from https://www.shadertoy.com/view/tXV3Rw
 // changes:
 // parameterized colors
+// expanded style to fit mine...
 // made smaller, changed colors,
 // added little glow animation
+
+// yes, join the Discord!! https://discord.gg/XtmMN6E
+// it's official, see the bottom left corner
 
 
 // goal is to get the apple logo kinda look, ref by 
