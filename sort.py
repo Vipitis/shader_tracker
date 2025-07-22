@@ -5,7 +5,7 @@ import os
 FILE_NAME = "jakel101_shaders.json"  # temporary shortcut, might be stdin? or dynamic?
 SKIP_TAGS = {"bug", "test"} # tags to be skipped in the gallery.md
 
-def display_field(shader_data) -> str:
+def display_field(shader_data:dict, relative_path:os.PathLike) -> str:
     """
     returns a formatted markdown table row with basic information
     """
@@ -18,7 +18,7 @@ def display_field(shader_data) -> str:
     retrieved = datetime.datetime.fromisoformat(shader_data["info"]["retrieved"]).strftime("%Y-%m-%d %H:%M")
     row_template = f""" \
     | [![link to source](https://www.shadertoy.com/media/shaders/{shader_id}.jpg)](https://www.shadertoy.com/view/{shader_id}) \
-    | [**{name}**](#todo) <br> {description} \
+    | [**{name}**]({relative_path}) <br> {description} \
     | published: {date}<br> last saved: {retrieved} |
     """
     return "\n".join([r.lstrip() for r in row_template.splitlines()])
@@ -32,14 +32,15 @@ if __name__ == "__main__":
     # TODO: extract to function(s)
     # make one folder per shader?
     os.makedirs(user_name, exist_ok=True)
-    markdown_text = "### Preview gallery\n| Thumbnail (click for source) | Title and Description | Dates |\n| --- | --- | --- |\n"
-    for shader in loaded_data["shaders"]:
+    markdown_text = "### Preview gallery\n| Thumbnail (click for source) | Title and Description (click for tracked files) | Dates |\n| --- | --- | --- |\n"
+    for shader in loaded_data["shaders"]: #TODO maybe sort by likes/views?
         normalized_name = "".join(
             [c if c.isalnum() else "_" for c in shader["info"]["name"]]
         )
         # TODO: handle renaming somehow? (git mv tracking too?)
+        local_dir = f'{shader["info"]["id"]}_{normalized_name}'
         shader_path = os.path.join(
-            user_name, f'{shader["info"]["id"]}_{normalized_name}'
+            user_name, local_dir
         )
         os.makedirs(shader_path, exist_ok=True)
         with open(os.path.join(shader_path, "data.json"), "w") as f:
@@ -52,7 +53,7 @@ if __name__ == "__main__":
             ) as f:
                 f.write(code)
         if not set(shader["info"]["tags"]).intersection(SKIP_TAGS):
-            markdown_text += display_field(shader)
+            markdown_text += display_field(shader, local_dir)
     markdown_text += "\n" # lazy footer?
 
     with open(os.path.join(user_name, "README.md"), "w") as f:
