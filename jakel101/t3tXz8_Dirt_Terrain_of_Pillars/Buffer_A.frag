@@ -76,10 +76,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     vec2 uv = (fragCoord * 2.0 - iResolution.xy)/iResolution.y;
     
     // we don't do anything interesting here :(
-    float height = fbm(uv*6.0+vec2(iTime*0.5));
+    float height = fbm(uv*3.0+vec2(iTime*0.2));
     
     // let's have some fun!
-    float clouds = fbm(uv*3.0+vec2(-iTime*0.1));
+    float clouds = fbm(uv*4.0+vec2(-iTime*0.1));
     // clouds = uv.y; //ramp for testing
     
     fragColor = vec4(vec3(height, clouds, 0.0),1.0);

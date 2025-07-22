@@ -3,6 +3,11 @@
 // Image pass implemented as my heightmap pathtracing project: https://www.shadertoy.com/view/M3VBWt
 // with a couple tweaks to make it work for this example :)
 
+// SOME BUGS: (or todos)
+// the raycast doesn't work "upwards" as expected. so camera stays outside and orbiting
+// clouds are composited ontop and don't care for order or distance (so they 
+// clouds have a strong moire pattern because traversal abbrpuptly begins at the top plane
+
 # define PI 3.141592653
 // tweaked with 0.4 in mind others could look wonky...
 # define HEIGHT_SCALE 0.4
@@ -11,7 +16,7 @@
 # define CELLS ivec2(min(iChannelResolution[0].x, iChannelResolution[0].y))
 
 // unsure yet where to bring this!
-# define SUN normalize(vec3(sin(iDate.w*0.5), cos(iTime), HEIGHT_SCALE*1.5))
+# define SUN normalize(vec3(sin(iDate.w*0.05), cos(iTime*0.2), HEIGHT_SCALE*1.5))
 // normalize(vec3(3.0, -5.0, 2.0))
 
 // horizontal FOV, if you use negative values the camera will be orthographic!
@@ -19,7 +24,7 @@
 // FOV -1.0 for orthographic (sensor size)
 // FOV 90.0 for perspective wide
 // FOV 45.0 for perspective narower
-# define FOV 90.0
+# define FOV 55.0
 
 ivec2 worldToCell(vec3 p) {
     
@@ -95,7 +100,7 @@ vec4 pillar_hits(ivec2 cell, float height, vec3 ro, vec3 rd){
     
     // for the case of clouds the box is at the top?
     if (height < 0.0){
-        p.z = HEIGHT_SCALE+abs(height*.25);
+        p.z = HEIGHT_SCALE*(1.0-abs(height*0.5));
     }    
     
     // TODO: redo this math when less asleep...
@@ -131,25 +136,27 @@ vec4 sampleHeight(ivec2 cell){
     vec4 res;
     res.a = tex.r; // our height data is in this channel
     res.rgb = terrain_palette(res.a*1.5-0.2); // move it a round a bit so the pallete looks okay...
-    res.a *= HEIGHT_SCALE;    
+    res.a *= HEIGHT_SCALE;
     return res;
 }
-
+// this could be joined into the function above.
 float sampleClouds(ivec2 cell){
     // idea is to read the texture data in a specific channel for cloud height/density?
     // this needs to be implemented in my function down below as an alternative hit.
     vec4 tex = texelFetch(iChannel0, cell, 0);        
     float res = tex.g; // this channel has "cloud" terrain
     // maybe we clamp it or something to have no clouds?
-    //res += 0.55;
+    res -= 0.55; // negative values become clouds that show up.
     return res;    
 }
 
-vec4 raycast(vec3 ro, vec3 rd){
+vec4 raycast(vec3 ro, vec3 rd, inout float cloud_acc){
     // cast the ray untill there is a hit or we exit the box
     // "any hit" shader?
     // returns tex + dist, negative dist means a "miss"
+    // the inout for clouds sums up it's distance and depth of clouds.
     vec4 box_hit = AABB(vec3(0.0, 0.0, HEIGHT_SCALE*0.5), vec3(1.0, 1.0, HEIGHT_SCALE*0.5), ro, rd);
+    cloud_acc = 0.0;
     
     // miss or "inside" -.- TODO: got to figure out a better  check with normals maybe!
     vec3 entry_norm = vec3(0.0);
@@ -169,7 +176,7 @@ vec4 raycast(vec3 ro, vec3 rd){
     }
     
     //return vec4(vec3(0.6), 1.0);
-    //float cloud_acc = 0.0;
+    
     vec3 entry;
     entry = ro + rd*(box_hit.x); // should be start "inside" the box
     ivec2 current_cell = worldToCell(entry); // TODO: this one is problematic!
@@ -183,13 +190,15 @@ vec4 raycast(vec3 ro, vec3 rd){
         }        
         // so let's look for clouds first!
         float cloud_depth = sampleClouds(current_cell);        
-        if (cloud_depth > 0.55){ // cand adjust how "many" clouds here!
+        if (cloud_depth < 0.){ // cand adjust how "many" clouds here!
             // only if there is a cloud we even consider this
-            vec4 cloud_hit = pillar_hits(current_cell, -(cloud_depth*0.1), ro, rd);
+            vec4 cloud_hit = pillar_hits(current_cell, (cloud_depth*0.2), ro, rd);
             if ((cloud_hit.x <= cloud_hit.y)){
-                //cloud_acc += max(0.0,);
                 
-                return vec4(vec3(cloud_depth*2.5), abs(cloud_hit.x));
+                // we scale the cloud by how much of it we traversed plus the inverse dpeth (~= color)?
+                cloud_acc += (1.0 - cloud_depth)*(cloud_hit.y - cloud_hit.x);
+                
+                //return vec4(vec3((1.0 - cloud_depth)), 0.0*abs(cloud_hit.x));
             }
         }
         
@@ -228,7 +237,8 @@ vec4 raycast(vec3 ro, vec3 rd){
             // half the phong diffuse
             // TODO: assume some base "emissive" quality to all pillars (or scaled with some value?)
             // needs better hit model and shader to accumulate over a few traces.
-            col *= (2.0*dot(entry_norm, -SUN)) + 0.2; // "ambient"/emission term                                   
+            col *= (2.0*dot(entry_norm, -SUN)) + 0.2; // "ambient"/emission term
+            
             return vec4(col, abs(hit.x));
         }        
         
@@ -258,19 +268,24 @@ vec4 raycast(vec3 ro, vec3 rd){
 
 }
 
+// more like a bad shadowmap
 float shadow(vec3 ro, vec3 rd){
     // return the amount of shadowed?
     // we are now marching upwards from some hit
     // ro is essentially the point we started from
     // rd is the sun angle
-    vec4 res = raycast(ro, normalize(rd));
+    float cloud_term;
+    vec4 res = raycast(ro, normalize(rd), cloud_term);
     //return res.a;
     if (res.a < 0.0){// || (ro + rd*res.a).z >= HEIGHT_SCALE){
         // likely means outside the box/ground!
-        return 1.0;
+        // so think like "skylight"        
+        cloud_term = clamp(1.0-exp(-cloud_term*20.0), 0.0, 1.0);
+        // full sunlight        
+        return 1.0 -cloud_term;
     }    
     else {
-        return 0.5;
+        return 0.0;
     }
 }
 
@@ -284,6 +299,7 @@ float checkerboard(vec2 check_uv, float cells){
 
 vec4 sampleGround(vec3 ro, vec3 rd){
     // for any ray that misses the heightmap
+    // TODO: rename to sample skybox maybe? as the ground is sorta part of that...
     float ground_height = 0.0;
     float ground_dist = (ground_height-ro.z)/rd.z;
     if (ground_dist < 0.0) {
@@ -330,7 +346,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     vec3 camera_pos = vec3(
         cos(azimuth)*cos(altitude),
         sin(azimuth)*cos(altitude),
-        sin(altitude));    
+        sin(altitude));               
     // the camera is always looking "at" the origin or half way above it
     vec3 look_dir = normalize(vec3(0.0, 0.0, HEIGHT_SCALE*0.5) - camera_pos);
     
@@ -340,6 +356,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     // two vectors orthogonal to this camera direction (tagents?)    
     //vec3 look_u = camera_pos + vec3(-sin(azimuth), cos(azimuth), 0.0);
     //vec3 look_v = camera_pos + vec3(sin(altitude)*-cos(azimuth), sin(altitude)*-sin(azimuth), cos(altitude));    
+
     
     // turns out analytically these aren't correct. so using cross instead -.-
     vec3 look_u = normalize(cross(vec3(0.0, 0.0, -1.0), look_dir));
@@ -375,17 +392,28 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     }
     
     // actual stuff happening:
-    vec4 res = raycast(ray_origin, ray_dir);
+    float cloud_sum;
+    vec4 res = raycast(ray_origin, ray_dir, cloud_sum);
     if (res.a < 0.0) {
-        res = sampleGround(ray_origin, ray_dir);
+        // we missed the initial terrain
+        res = sampleGround(ray_origin, ray_dir);        
     }
     vec3 hit = ray_origin + (ray_dir*res.a);
-    vec4 ref = raycast(hit, SUN).rgba; //reflection (the full shadow)    
+    
+    float shadow_cloud; // unused?
+    vec4 ref = raycast(hit, SUN, shadow_cloud).rgba; //reflection (the full shadow)    
     ref.rgb *= 1.0 - step(0.0, ref.a); // this makes misses black?
     
-    float shadow_amt = shadow(hit, SUN);
     
-    vec3 col = res.rgb * shadow_amt;
+    float shadow_amt = shadow(hit, SUN);
+    // actually more light amount -.-
+    // so we add and "ambient" base like here
+    vec3 col = res.rgb * max(0.2, shadow_amt);
+    
+    // bad approximation of "beers law"?
+    float cloud_term = clamp(1.0-exp(-cloud_sum*20.0), 0.0, 1.0);
+    // additive/premultiplied merge here... could be wrong because not linear?
+    col = mix(col,vec3(cloud_term), cloud_term);    
     
     // TODO: better "shadow" value via actually colored shadow??
     // vec3 col2 = res.rgb + ref.rgb*0.3;    
