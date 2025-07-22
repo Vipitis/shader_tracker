@@ -3,11 +3,11 @@
   "info": {
     "id": "tXK3Rd",
     "date": "1752868197",
-    "viewed": 71,
+    "viewed": 92,
     "name": "interactive broken LCD",
     "username": "jakel101",
     "description": "the lowest effort idea on my massive list of shader ideas. Use the mouse start and end positions to break it in another way.\nYou can also put this in the image pass for other existing shaders!",
-    "likes": 8,
+    "likes": 9,
     "published": 3,
     "flags": 32,
     "usePreview": 0,
@@ -18,7 +18,7 @@
       "discord"
     ],
     "hasliked": 0,
-    "retrieved": "2025-07-19T21:14:06.527906+00:00"
+    "retrieved": "2025-07-22T00:10:11.839842+00:00"
   },
   "renderpass": [
     {
