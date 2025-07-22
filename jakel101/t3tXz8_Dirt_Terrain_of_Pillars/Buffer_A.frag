@@ -81,6 +81,6 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     // let's have some fun!
     float clouds = fbm(uv*4.0+vec2(-iTime*0.1));
     // clouds = uv.y; //ramp for testing
-    
-    fragColor = vec4(vec3(height, clouds, 0.0),1.0);
+    // the blue channel might be water... (and we could animate/simulate it here!)
+    fragColor = vec4(vec3(height, clouds, 0.3),1.0);
 }

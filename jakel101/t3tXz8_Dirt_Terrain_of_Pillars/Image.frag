@@ -136,6 +136,15 @@ vec4 sampleHeight(ivec2 cell){
     vec4 res;
     res.a = tex.r; // our height data is in this channel
     res.rgb = terrain_palette(res.a*1.5-0.2); // move it a round a bit so the pallete looks okay...
+    
+    // could also just be a constant here!
+    if (tex.b > res.a){
+        // cheap solid water!
+        // TODO semi transparen/reflective water?
+        // all based on the blue channel in the texture, so this can be animated etc
+        res.a = tex.b;
+        res.rgb = vec3(0.1, 0.1, 0.8);
+    }
     res.a *= HEIGHT_SCALE;
     return res;
 }
