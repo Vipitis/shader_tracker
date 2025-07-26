@@ -10,7 +10,7 @@
 
 # define PI 3.141592653
 // tweaked with 0.4 in mind others could look wonky...
-# define HEIGHT_SCALE 0.4
+# define HEIGHT_SCALE 0.5
 
 // this is square but still depends on the canvas resolution!
 # define CELLS ivec2(min(iChannelResolution[0].x, iChannelResolution[0].y))
@@ -24,7 +24,7 @@
 // FOV -1.0 for orthographic (sensor size)
 // FOV 90.0 for perspective wide
 // FOV 45.0 for perspective narower
-# define FOV 55.0
+# define FOV 65.0
 
 ivec2 worldToCell(vec3 p) {
     
@@ -138,12 +138,12 @@ vec4 sampleHeight(ivec2 cell){
     res.rgb = terrain_palette(res.a*1.5-0.2); // move it a round a bit so the pallete looks okay...
     
     // could also just be a constant here!
-    if (tex.b > res.a){
-        // cheap solid water!
+    if (tex.b > 0.0){
+        // cheap solid water in amount of water per pillar...
         // TODO semi transparen/reflective water?
-        // all based on the blue channel in the texture, so this can be animated etc
-        res.a = tex.b;
-        res.rgb = vec3(0.1, 0.1, 0.8);
+        // the simulation is in the Buffer pass, we just reconstruct the height for rendering here
+        res.a += tex.b;
+        res.rgb = mix(vec3(0.2, 0.5, 0.8), vec3(0.1, 0.1, 0.9), tex.b*20.0); // little color for water "depth"
     }
     res.a *= HEIGHT_SCALE;
     return res;
@@ -289,7 +289,7 @@ float shadow(vec3 ro, vec3 rd){
     if (res.a < 0.0){// || (ro + rd*res.a).z >= HEIGHT_SCALE){
         // likely means outside the box/ground!
         // so think like "skylight"        
-        cloud_term = clamp(1.0-exp(-cloud_term*20.0), 0.0, 1.0);
+        cloud_term = clamp(1.0-exp(-cloud_term*15.0), 0.0, 1.0);
         // full sunlight        
         return 1.0 -cloud_term;
     }    
@@ -417,12 +417,12 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     float shadow_amt = shadow(hit, SUN);
     // actually more light amount -.-
     // so we add and "ambient" base like here
-    vec3 col = res.rgb * max(0.2, shadow_amt);
+    vec3 col = res.rgb * max(0.3, shadow_amt);
     
     // bad approximation of "beers law"?
-    float cloud_term = clamp(1.0-exp(-cloud_sum*20.0), 0.0, 1.0);
+    float cloud_term = clamp(1.0-exp(-cloud_sum*15.0), 0.0, 1.0);
     // additive/premultiplied merge here... could be wrong because not linear?
-    col = mix(col,vec3(cloud_term), cloud_term);    
+    col = mix(col, vec3(cloud_term), cloud_term);
     
     // TODO: better "shadow" value via actually colored shadow??
     // vec3 col2 = res.rgb + ref.rgb*0.3;    
