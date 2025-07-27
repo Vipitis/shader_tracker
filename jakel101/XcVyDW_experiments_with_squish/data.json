@@ -3,7 +3,7 @@
   "info": {
     "id": "XcVyDW",
     "date": "1731888580",
-    "viewed": 121,
+    "viewed": 132,
     "name": "experiments with squish",
     "username": "jakel101",
     "description": "[mouse control on]\njust trying to come up with some implementation of squishing myself... not quite sure what's possible\nwant to extend this to 3D one day and also use in a physics simulation...",
@@ -17,7 +17,7 @@
       "amorphous"
     ],
     "hasliked": 0,
-    "retrieved": "2025-06-05T23:49:51.807010+00:00"
+    "retrieved": "2025-07-27T23:40:44.865504+00:00"
   },
   "renderpass": [
     {

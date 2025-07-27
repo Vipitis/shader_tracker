@@ -3,110 +3,142 @@
 // improved: https://www.desmos.com/3d/loyr0cvm2c
 // done:? https://www.desmos.com/3d/bewjnaugsh
 # define PI 3.141592654
+# define FOV 90.0
 
+struct Ray{
+    vec3 origin;
+    vec3 dir;
+    vec3 inv_dir; // for speedup?
+};
 
-// TODO: struct sphere with .pos and .size maybe?
-vec4 RaySphereIntersection(vec3 ro, vec3 rd, vec3 sphere_center, float radius){
-    // find the depth of intersection?
-    
-    float h = dot(rd, ro); // get this distance to the center (projection depth?)
-    h = 1.0; // why is the above incorrect?
-    // point we trace towards center... plane paralle to the camera but at the position of the sphere
-    vec3 p = ro + (normalize(rd)*h);
-    float dist = length(p-sphere_center); // in the parallel plane
-    
-    // now get actual hit?
-    // need to find the exact h... which in this case is
-    vec3 o1 = cross(rd,p);
-    vec3 o2 = cross(rd, o1);
-    //TODO: this needs a min/clamp for undefined behavior. 
-    float height = max(0.0,sqrt((radius - pow(length(o1),2.0) - pow(length(o2),2.0))));
-    
-    // TODO: this needs to actual depth with h?
-    float h2 = (h - height);
-    vec3 p2 = ro + (normalize(rd) * h2);
+struct BoxHit{
+    bool hit;
+    bool inside;
+    vec3 entry;
+    vec3 exit;
+    vec3 entry_norm;
+    vec3 exit_norm;
+    float entry_dist;
+    float exit_dist;
+};
 
-    vec3 norm = normalize(p2 - sphere_center);
+// sorta reference: https://tavianator.com/2022/ray_box_boundary.html
+BoxHit AABB(vec3 center, vec3 size, Ray ray){
+    BoxHit res;
+        
+    vec3 pos = center + size;
+    vec3 neg = center - size;
     
-    // this is a miss essentially?
-    if (height <= 0.0) {
-        return vec4(-1.0);
-    }
-    //norm = vec3(height);      
+    vec3 pos_dist = (pos-ray.origin) * ray.inv_dir;
+    vec3 neg_dist = (neg-ray.origin) * ray.inv_dir;
     
-    return vec4(vec3(norm), height); // negative values means no hit!
+    vec3 min_dist = min(pos_dist, neg_dist);
+    vec3 max_dist = max(pos_dist, neg_dist);
+    
+    res.entry_dist = max(max(min_dist.x, min_dist.y), min_dist.z);
+    res.exit_dist = min(min(max_dist.x, max_dist.y), max_dist.z);
+    
+    // essentially methods?
+    res.hit = res.entry_dist < res.exit_dist && res.exit_dist > 0.0;
+    res.inside = res.entry_dist < 0.0; // entry behind us
+    
+    res.entry = ray.origin + ray.dir*res.entry_dist;
+    res.exit = ray.origin + ray.dir*res.exit_dist;
+    
+    // normals point away from the center
+    res.entry_norm = -sign(ray.dir) * vec3(greaterThanEqual(min_dist, vec3(res.entry_dist)));
+    res.exit_norm = sign(ray.dir) * vec3(lessThanEqual(max_dist, vec3(res.exit_dist)));
+    
+    return res;
 }
-
-// in progress:
-vec4 RayCubeIntersection(vec3 ro, vec3 rd, vec3 size){
-    // returns normals and depth    
-    // let's just assumme there cube is next at the center and perfectly oriented
-    // AABB = axis aligned bounding box!    
-    
-    // distances to all six faces
-    vec3 h_pos = (size-ro)/rd;
-    vec3 h_neg = (-size-ro)/rd;
-    
-    // near and far sides
-    vec3 h_near = min(h_pos, h_neg);
-    vec3 h_far = max(h_pos, h_neg);
-    
-    // near and far intersection points
-    float t_near = max(h_near.x,max(h_near.y,h_near.z));
-    float t_far = min(h_far.x,min(h_far.y,h_far.z));
-    
-    // the position we actually hit.
-    vec3 p = ro + normalize(rd)*t_near;
-    
-    if (t_near > t_far ) return vec4(-1.); // miss
-    
-    // TODO: actual normals?
-    vec3 norm;
-    if (p.z >= size.z-0.0001) norm = vec3(0,0,1);
-    if (abs(p.y) >= size.y-0.0001) norm = vec3(0,1,0);
-    if (abs(p.x) >= size.x-0.0001) norm = vec3(1,0,0);
-    return vec4(norm, t_near);
-}
-
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
-{    
+{
+    // uv normalized to [-1..1] for height with more width
     vec2 uv = (2.0*fragCoord - iResolution.xy)/iResolution.y;
     vec2 mo = (2.0*iMouse.xy - iResolution.xy)/iResolution.y;
-    // orbiting camera setup
-    float azimuth = PI*mo.x;
-    float altitude = 0.5*PI*clamp(-0.0, 1.0,mo.y); // maybe just positive?
+    
+    //fragColor = texture(iChannel0, uv);
+    //return;
+    
+    // for when it's just idling...   
+    float azimuth = iTime*0.3 + mo.x; // keeps a bit of residue of the mouse!
+    float altitude = cos(iTime*0.5)*0.35;      
+    if (sign(iMouse.z) > 0.0){
+        // orbiting camera setup
+        azimuth = PI*mo.x;
+        altitude = 0.5*PI*clamp(mo.y, -0.85, 0.99); // maybe just positive?
+    }
+    
+    // make sure you don't look "below"
+    altitude = clamp(altitude, -PI, PI);
+    
+    // a unit length orbit!
     vec3 camera_pos = vec3(
         cos(azimuth)*cos(altitude),
         sin(azimuth)*cos(altitude),
-        sin(altitude));    
-    // the camera is always looking "at" the origin
-    vec3 look_dir = vec3(0.0, 0.0, -0.0) -camera_pos;
-    //camera_pos += look_dir * -2.0; // moving the camera "back" to avoid occlusions?
-    // two vectors orthogonal to this camera direction (tagents?)
-    vec3 look_u = camera_pos + vec3(-sin(azimuth), cos(azimuth), 0.0);
+        sin(altitude));               
+    // the camera is always looking "at" the origin or half way above it
+    vec3 look_dir = normalize(vec3(0.0, 0.0, 0.0) - camera_pos);
+    
+    
+    // TODO moving the camera in and out over time??
+    camera_pos += look_dir * -0.0; // moving the camera "back" to avoid occlusions?
+    // two vectors orthogonal to this camera direction (tagents?)    
+    //vec3 look_u = camera_pos + vec3(-sin(azimuth), cos(azimuth), 0.0);
+    //vec3 look_v = camera_pos + vec3(sin(altitude)*-cos(azimuth), sin(altitude)*-sin(azimuth), cos(altitude));    
+
+    
+    // turns out analytically these aren't correct. so using cross instead -.-
+    vec3 look_u = normalize(cross(vec3(0.0, 0.0, -1.0), look_dir));
     vec3 look_v = normalize(cross(camera_pos, look_u)); // is this faster?
-    //vec3 look_v = camera_pos + vec3(sin(altitude)*-cos(azimuth), sin(altitude)*-sin(azimuth), cos(altitude));
-        
     // camera plane(origin of each pixel) -> barycentric?
-    vec3 camera_plane = camera_pos + (look_u*uv.x) + (look_v*uv.y);
-    // TODO: redo this whole section as a matrix.
+    
+    vec3 camera_plane;
+    vec3 ray_dir;
+    vec3 ray_origin;
+                        
+    if (FOV > 0.0){
+        // assume a pinhole camera.
+        // FOV is the horizontal fov, the given focal length becomes:
+        // the 1.0 is the sensor height.
+        float focal_length = 1.0/tan(radians(FOV*0.5));
+        
+        // the ro
+        camera_plane = camera_pos - (look_dir*focal_length) + ((look_u*uv.x) + (look_v*uv.y))*-1.0; // inverted here to see upright
+        ray_origin = camera_pos;
+        
+        // the rd
+        ray_dir = camera_pos-camera_plane;
+        ray_dir = normalize(ray_dir);        
+    }
+    
+    else {
+        // negative FOV values are interpreted as a sensor size for a orthographic camera!
+        // horizontal sensor size, -1 would be something sensible... everything else is far away
+        float sensor_size = FOV*0.5*-1.0;
+        camera_plane = camera_pos + ((look_u*uv.x)+(look_v*uv.y))*sensor_size; // wider fov = larger "sensor"
+        ray_dir = look_dir;
+        ray_origin = camera_plane;
+    }
     
     
-    vec3 col = vec3(0.05);    
+    Ray camera = Ray(ray_origin, ray_dir, 1.0/ray_dir);
+    BoxHit res = AABB(vec3(0.0, sin(iTime*0.2), 0.0), vec3(0.5), camera);
     
-    vec3 p = camera_plane; //ray origin
-    vec4 res; //.rgb = normal, .w = distance//intersection
+    vec3 col = vec3(0.05);
     
-    res = RaySphereIntersection(p, look_dir, vec3(0.0, -0.0, 0.0), 0.5);
-    if (res.w < 1.0) res = RayCubeIntersection(p, look_dir, vec3(0.5));
+    if (res.hit) {
+        col = res.entry_norm + vec3(0.5);
+        if (res.inside) {
+            //col = vec3(0.5);
+            col = res.exit_norm + vec3(0.5);
+        }
+    }
+    else {
+        //col = res.exit_norm + vec3(0.5);
+    }
     
-    fragColor = res;    
-    return;
+    fragColor = vec4(col, 1.0);
     
-    //col = camera_plane;
-    
-    //col.xy = uv;
-    //col.rgb = pow(col.rgb, vec3(1.0/2.2)); // gamma correction?
-    fragColor = vec4(col*0.5,1.0);
 }

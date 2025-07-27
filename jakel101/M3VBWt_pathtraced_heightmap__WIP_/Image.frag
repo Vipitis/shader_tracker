@@ -24,8 +24,7 @@
 # define PI 3.141592653
 # define HEIGHT_SCALE 0.4
 
-// resolution of the sampled area limit Y to some number smaller than iResolution.y to change the "speed"
-# define CELLS ivec2(iChannelResolution[0].x, min(iChannelResolution[0].y,512.0))
+# define CELLS ivec2(iChannelResolution[0].x, iChannelResolution[0].y)
 
 // unsure yet where to bring this!
 # define SUN normalize(vec3(sin(iDate.w*0.5), cos(iTime), HEIGHT_SCALE*1.5))
@@ -37,6 +36,36 @@
 // FOV 90.0 for perspective wide
 // FOV 45.0 for perspective narower
 # define FOV 90.0
+
+
+// next project: actual structs for easier pathracing:
+struct Material{
+    vec3 col; // ground color (or texture?)
+    float emissivity; //emitted light in some unit?
+    float roughness; // or just fresnel? what kinda model are we doing?
+    float translucency; // something like 1.0 for glass and 0.0 for solids? -> rays split/sample/refract??
+};
+
+struct Hit{
+    vec3 normal;
+    vec3 pos;
+    Material mat;
+    // no object ID or something I think...
+};
+
+struct Ray{
+    vec3 origin;
+    vec3 direction;
+    float dist;
+};
+
+
+// exaples?
+Material white_chalk = Material(vec3(1.0), 0.0, 0.99, 0.0);
+Material ground = Material(vec3(0.5), 0.0, 0.85, 0.0);
+Material sky = Material(vec3(0.02, 0.03, 0.95), 0.5, 0.5, 0.5);
+Material glass = Material(vec3(0.95), 0.0, 0.05, 0.95);
+
 
 ivec2 worldToCell(vec3 p) {
     
@@ -276,6 +305,28 @@ vec4 sampleGround(vec3 ro, vec3 rd){
 }
 
 
+float dda(vec3 rd, vec3 p){
+    // goal here is to return the distance to the next grid wall..
+    // we just do this in 2d and ignore the 3rd dimension
+    // depends on the CELLS gloabl/macro
+    float t;
+    
+    ivec2 cell = worldToCell(p);
+    
+    vec2 grid_uv = p.xy;
+    grid_uv += 1.0;
+    grid_uv *= 0.5;
+    grid_uv *= vec2(CELLS);
+    grid_uv = fract(grid_uv);
+    
+    vec2 wall_dist_deltas = abs(1./rd.yx); // because rd is normalized
+    
+    // which is closer?
+    
+    
+    
+    return t;
+}
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {

@@ -152,7 +152,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     //TODO terrain can still move if we offset the sample coords!
     vec4 prev = texelFetch(iChannel0, st, 0);
     if (iFrame < 1 || prev.x <= 0.0){ // hack for resizing? -> still messes up uv scaling...
-        prev = init_terrain(uv, 0.0);
+        prev = init_terrain(uv, 0.0); // TODO: change the value here to something like iDime.w to et different starting terrains.
     }
     else {
         // let's have some fun!

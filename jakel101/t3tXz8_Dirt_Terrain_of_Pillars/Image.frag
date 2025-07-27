@@ -9,14 +9,14 @@
 // clouds have a strong moire pattern because traversal abbrpuptly begins at the top plane
 
 # define PI 3.141592653
-// tweaked with 0.4 in mind others could look wonky...
-# define HEIGHT_SCALE 0.5
+// tweaked with 0.5 in mind others could look wonky...
+# define HEIGHT_SCALE 0.55
 
 // this is square but still depends on the canvas resolution!
 # define CELLS ivec2(min(512.0,min(iChannelResolution[0].x, iChannelResolution[0].y)))
 
 // unsure yet where to bring this!
-# define SUN normalize(vec3(sin(iDate.w*0.05), cos(iTime*0.2), HEIGHT_SCALE*1.5))
+# define SUN normalize(vec3(sin(iDate.w*0.05), cos(iTime*0.2), HEIGHT_SCALE*1.1))
 // normalize(vec3(3.0, -5.0, 2.0))
 
 // horizontal FOV, if you use negative values the camera will be orthographic!
@@ -36,59 +36,56 @@ ivec2 worldToCell(vec3 p) {
     st = min(st, CELLS -1);
     return st;
 }
+struct Ray{
+    vec3 origin;
+    vec3 dir;
+    vec3 inv_dir; // for speedup?
+};
 
-vec4 AABB(vec3 center, vec3 extend, vec3 ro, vec3 rd){        
-    // miss is found by checking rear_hit > front_hit
-    // .zw contains information about the entry/exit 1: +x, -1: -x, 2: +y, -2: -y, 3: +z, -3: -z??
-    // you can do norm[abs(int(box_hit.z))-1] = sign(box_hit.z);
+struct BoxHit{    
+    bool hit;
+    // rest illdefined for a miss
+    bool inside;
+    vec3 entry;
+    vec3 exit;
+    vec3 entry_norm;
+    vec3 exit_norm;
+    float entry_dist;
+    float exit_dist;
+};
+
+// sorta reference: https://tavianator.com/2022/ray_box_boundary.html
+BoxHit AABB(vec3 center, vec3 size, Ray ray){
+    BoxHit res;
+        
+    vec3 pos = center + size;
+    vec3 neg = center - size;
     
-    // extend goes both ways! (size)
-    vec3 front = center + sign(-rd)*extend; 
-    vec3 rear = center + sign(rd)*extend; 
+    vec3 pos_dist = (pos-ray.origin) * ray.inv_dir;
+    vec3 neg_dist = (neg-ray.origin) * ray.inv_dir;
     
-    //now distance those 6 planes:
-    vec3 front_dist = (front-ro)/rd;
-    vec3 rear_dist = (rear-ro)/rd;
+    vec3 min_dist = min(pos_dist, neg_dist);
+    vec3 max_dist = max(pos_dist, neg_dist);
     
-    // TODO: turn into massive if/else if/else blocks for the direction info? (is there argmax?)
-    float front_hit;//= max(max(front_dist.x, front_dist.y), front_dist.z); // front
-    float front_dir;
-    if (front_dist.x > front_dist.y && front_dist.x > front_dist.z){
-        front_hit = front_dist.x;
-        front_dir = 1.0 * sign(rd.x);
-    }
-    else if (front_dist.y > front_dist.x && front_dist.y > front_dist.z) {
-        front_hit = front_dist.y;
-        front_dir = 2.0 * sign(rd.y);
-    }
-    else {
-        front_hit = front_dist.z;
-        front_dir = 3.0 * sign(rd.z);
-    }
-    // in case of ro being inside the box, the front_dir normal still needs to point away from center.
-    front_dir *= sign(front_hit); 
+    res.entry_dist = max(max(min_dist.x, min_dist.y), min_dist.z);
+    res.exit_dist = min(min(max_dist.x, max_dist.y), max_dist.z);
     
-    float rear_hit;// = min(min(rear_dist.x, rear_dist.y), rear_dist.z);
-    float rear_dir;
-    if (rear_dist.x < rear_dist.y && rear_dist.x < rear_dist.z){
-        rear_hit = rear_dist.x;
-        rear_dir = 1.0 * sign(rd.x);
-    }
-    else if (rear_dist.y < rear_dist.x && rear_dist.y < rear_dist.z) {
-        rear_hit = rear_dist.y;
-        rear_dir = 2.0 * sign(rd.y);
-    }
-    else {
-        rear_hit = rear_dist.z;
-        rear_dir = 3.0 * sign(rd.z);
-    }
+    // essentially methods?
+    res.hit = res.entry_dist < res.exit_dist && res.exit_dist > 0.0;
+    res.inside = res.entry_dist < 0.0; // entry behind us
     
-    vec4 res = vec4(front_hit, rear_hit, front_dir, rear_dir);    
+    res.entry = ray.origin + ray.dir*res.entry_dist;
+    res.exit = ray.origin + ray.dir*res.exit_dist;
+    
+    // normals point away from the center
+    res.entry_norm = -sign(ray.dir) * vec3(greaterThanEqual(min_dist, vec3(res.entry_dist)));
+    res.exit_norm = sign(ray.dir) * vec3(lessThanEqual(max_dist, vec3(res.exit_dist)));
+    
     return res;
 }
 
 
-vec4 pillar_hits(ivec2 cell, float height, vec3 ro, vec3 rd){    
+BoxHit pillar_hits(ivec2 cell, float height, Ray ray){    
     // let's move the pillar into world space by having it's center + extends
     
     vec3 extend = vec3(1.0/vec2(CELLS), abs(height)*0.5);
@@ -104,7 +101,7 @@ vec4 pillar_hits(ivec2 cell, float height, vec3 ro, vec3 rd){
     }    
     
     // TODO: redo this math when less asleep...
-    vec4 res = AABB(p, extend, ro, rd);
+    BoxHit res = AABB(p, extend, ray);
     return res;
 }
 
@@ -160,38 +157,25 @@ float sampleClouds(ivec2 cell){
     return res;    
 }
 
-vec4 raycast(vec3 ro, vec3 rd, inout float cloud_acc){
+vec4 raycast(Ray ray, inout float cloud_acc){
     // cast the ray untill there is a hit or we exit the box
     // "any hit" shader?
     // returns tex + dist, negative dist means a "miss"
     // the inout for clouds sums up it's distance and depth of clouds.
-    vec4 box_hit = AABB(vec3(0.0, 0.0, HEIGHT_SCALE*0.5), vec3(1.0, 1.0, HEIGHT_SCALE*0.5), ro, rd);
+    BoxHit box = AABB(vec3(0.0, 0.0, HEIGHT_SCALE*0.5), vec3(1.0, 1.0, HEIGHT_SCALE*0.5), ray);
     cloud_acc = 0.0;
     
-    //return ro.rgbb;
+    vec3 entry = box.entry;
     
-    // miss or "inside" -.- TODO: got to figure out a better  check with normals maybe!
-    vec3 entry_norm = vec3(0.0);
-    entry_norm[abs(int(box_hit.z))-1] = sign(box_hit.z);
-    vec3 entry;
-    entry = ro + rd*(box_hit.x); // should be start "inside" the box
-    
-    
-    //return vec4(entry_norm+vec3(0.5), 1.0);
-    if ((box_hit.x > box_hit.y)){// && dot(rd, entry_norm) >= 0.0){ //  && box_hit.y > 0.0 //? none of these is exactly correct
-        // if we "MISS" the whole box (not inside).
-        //return vec4(entry_norm+vec3(0.5)*1.1, -1.0);
-        return vec4(vec3(0.2, 0.8, 0.0), -abs(box_hit.y));
-    }   
-    else if (box_hit.y > 0.0){
-        //ro += rd* 0.0002; // so we avoid being "inside" a pillar early?
-        // we are inside because the entry is behind the ro!
-        //return vec4(vec3(rd), -1.0);
-        //return vec4(vec3(ro), -1.0);
-        //return vec4(entry, -1.0);
-        //return vec4(entry_norm+vec3(0.5), 1.0);
-        //return vec4(vec3(0.2, 0.0, 0.8), -abs(box_hit.y));
-        //entry = ro; // if we are "inside" the entry should just be ro!
+    if (!box.hit){
+        // if we "MISS" the whole box (not inside?).
+        
+        return vec4(vec3(0.2, 0.8, 0.0), -abs(box.exit_dist));
+    }
+    // everything below here is inside the box
+    if (box.inside){       
+        // if we are "inside" the entry should just be ro!
+        entry = ray.origin; // maybe problems with distance caluclations at the end?
     }
     
     //return vec4(vec3(0.6), 1.0);
@@ -206,82 +190,53 @@ vec4 raycast(vec3 ro, vec3 rd, inout float cloud_acc){
         if (current_cell.x < 0 || current_cell.x >= CELLS.x ||
             current_cell.y < 0 || current_cell.y >= CELLS.y){
             // we marched far enough are are "outside the box" now!
-            return vec4(vec3(0.4), -abs(box_hit.y));
+            return vec4(vec3(0.4), -abs(box.exit_dist));
         }        
         // so let's look for clouds first!
         float cloud_depth = sampleClouds(current_cell);        
         if (cloud_depth < 0.){ // cand adjust how "many" clouds here!
             // only if there is a cloud we even consider this
-            vec4 cloud_hit = pillar_hits(current_cell, (cloud_depth*0.2), ro, rd);
-            if ((cloud_hit.x <= cloud_hit.y)){
+            BoxHit cloud = pillar_hits(current_cell, (cloud_depth*0.2), ray);
+            if (cloud.hit){
                 
                 // we scale the cloud by how much of it we traversed plus the inverse dpeth (~= color)?
-                cloud_acc += (1.0 - cloud_depth)*(cloud_hit.y - cloud_hit.x);
-                
+                cloud_acc += (1.0 - cloud_depth)*(distance(cloud.entry,cloud.exit));
+                // TODO use cloud.inside to increase the scale? (try to remove the moire pattern)
                 //return vec4(vec3((1.0 - cloud_depth)), 0.0*abs(cloud_hit.x));
             }
         }
         
         vec4 tex = sampleHeight(current_cell);
-        vec4 hit = pillar_hits(current_cell, tex.a, ro, rd);
+        BoxHit pillar = pillar_hits(current_cell, tex.a, ray);
         
-        
-        
-        vec3 entry_norm = vec3(0.0);
-        entry_norm[abs(int(hit.z))-1] = sign(hit.z);
-        
-        
-        vec3 exit = ro + (rd * hit.y);
-        vec3 exit_norm = vec3(0.0);
-        exit_norm[abs(int(hit.w))-1] = sign(hit.w);                
-        
-        if (hit.x < 0.0 && hit.y < 0.0) {
-            // the current cell is "behind" us, we basically miss
-            
-            //return vec4(vec2(current_cell).xyx/10.0, -abs(hit.x));
-            //return vec4(vec3(hit.y)+0.5, -1.0);
-            //return vec4(exit, -1.0);
-            //return vec4(entry, -1.0);
-            //return vec4(vec3(0.6), -1.0);
-            //return vec4(hit);
-            //return vec4(exit_norm+vec3(0.5), 1.0);            
-            //continue; // jumps ahead in the loop!
-        }
-        else if ((hit.x <= hit.y) && (dot(rd, entry_norm) >= 0.0)){
-            // "any hit" (side/top)
-            //return vec4(vec2(current_cell).xyx/10.0, abs(hit.x));
-            //return vec4(vec3(hit.x), abs(hit.x));
-            
+        if (pillar.hit) {
+            // "any hit" (side/top/bot) -> loop ends here            
             // do a little bit of light sim by doing diffuse "block of chalk"
             vec3 col = tex.rgb;
             // half the phong diffuse
             // TODO: assume some base "emissive" quality to all pillars (or scaled with some value?)
             // needs better hit model and shader to accumulate over a few traces.
-            col *= (2.0*dot(entry_norm, -SUN)) + 0.2; // "ambient"/emission term
+            // TODO: should one of them be negative?
+            col *= (2.0*dot(pillar.entry_norm, SUN)) + 0.2; // "ambient"/emission term
             
-            return vec4(col, abs(hit.x));
-        }        
-        
-        if (abs(exit_norm.z) > 0.0){
-            //basically this is a "top" exit, we aren't stepping further anymore. (on the shadow dir)
-            // TODO: think about what this means!
-            //return vec4(0.98, 0.821, 0.75, -abs(box_hit.y));
+            return vec4(col, abs(pillar.entry_dist));
         }
         
-        if (hit.y >= box_hit.y){
-            return vec4(vec3(0.8), -abs(exit.y));
+        
+        if (pillar.exit_dist >= box.exit_dist){
+            return vec4(vec3(0.8), -abs(pillar.exit_dist));
         }
         
         // the step
-        ivec2 next_cell = current_cell + ivec2(exit_norm.xy);
+        ivec2 next_cell = current_cell + ivec2(pillar.exit_norm.xy);
         if (next_cell == current_cell){
             // in this case we do another raycast - but without any Z component
             // so the vector is sideways and points to a new cell!
-            hit = pillar_hits(current_cell, 1.0, ro, normalize(vec3(rd.xy, 0.0)));
-            exit_norm = vec3(0.0); // has to be reset
-            exit_norm[abs(int(hit.w))-1] = sign(hit.w);
+            vec3 flat_rd = vec3(ray.dir.xy, 0.0);
+            Ray flat_ray = Ray(ray.origin, flat_rd, 1.0/flat_rd);
             
-            next_cell += ivec2(exit_norm.xy);
+            BoxHit grid = pillar_hits(current_cell, 1.0, flat_ray);
+            next_cell += ivec2(grid.exit_norm.xy); // TODO check if this norm is correct!
         }
         // for next iteration
         current_cell = next_cell;
@@ -289,18 +244,18 @@ vec4 raycast(vec3 ro, vec3 rd, inout float cloud_acc){
     //return vec4(vec2(current_cell)/vec2(CELLS), 0.0, 0.0);
     // defualt "miss"? -> like we exit the box?
     cloud_acc = 0.0; // janky hack - I still need to figure out why this even reaches!
-    return vec4(vec3(1,0,0), -abs(box_hit.y));
+    return vec4(vec3(1,0,0), -abs(box.exit_dist));
 
 }
 
 // more like a bad shadowmap
-float shadow(vec3 ro, vec3 rd){
+float shadow(Ray sun_ray){
     // return the amount of shadowed?
     // we are now marching upwards from some hit
     // ro is essentially the point we started from
     // rd is the sun angle
     float cloud_term;
-    vec4 res = raycast(ro, normalize(rd), cloud_term);
+    vec4 res = raycast(sun_ray, cloud_term);
     //return res.a;
     if (res.a < 0.0){// || (ro + rd*res.a).z >= HEIGHT_SCALE){
         // likely means outside the box/ground!
@@ -330,7 +285,7 @@ vec4 sampleGround(vec3 ro, vec3 rd){
     if (ground_dist < 0.0) {
         // essentially sky hit instead?
         // just some random skybox right now... could be improved of course!
-        vec3 col = vec3(0.98, 0.79, 0.12)*exp(dot(SUN, rd));        
+        vec3 col = vec3(0.23, 0.59, 0.92)*exp(dot(SUN, rd)-0.8);
         col = clamp(col, vec3(0.0), vec3(1.0));
         return vec4(col, 30.0); // some random distance that is positive!
     }
@@ -418,9 +373,11 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         ray_origin = camera_plane;
     }
     
+    Ray camera = Ray(ray_origin, ray_dir, 1.0/ray_dir);
+    
     // actual stuff happening:
     float cloud_sum = 0.0;
-    vec4 res = raycast(ray_origin, ray_dir, cloud_sum);
+    vec4 res = raycast(camera, cloud_sum);
     // fragColor = vec4(vec3(res.rgb),1.0);
     //return; // early debug exit
     if (res.a < 0.0) {
@@ -431,14 +388,16 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         //res.a = abs(res.a);
     }
     vec3 hit = ray_origin + (ray_dir*res.a);
-            
+
+    // TODO: offset the ro a bit?
+    Ray sun_check = Ray(hit+0.001*SUN, SUN, 1.0/SUN);
     
     float shadow_cloud; // unused?
-    vec4 ref = raycast(hit, SUN, shadow_cloud).rgba; //reflection (the full shadow)    
+    vec4 ref = raycast(sun_check, shadow_cloud).rgba; //reflection (the full shadow)    
     ref.rgb *= 1.0 - step(0.0, ref.a); // this makes misses black?
     // ref.rgb *= 1.0-exp(-shadow_cloud*15.0); // more "realistic" cloud shadow?
     
-    float shadow_amt = shadow(hit, SUN);
+    float shadow_amt = shadow(sun_check);
     // actually more light amount -.-
     // so we add and "ambient" base like here
     vec3 col = res.rgb * max(0.3, shadow_amt);
