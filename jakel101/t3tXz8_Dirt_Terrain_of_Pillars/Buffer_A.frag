@@ -144,7 +144,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     vec2 uv = (fragCoord * 2.0 - iResolution.xy)/iResolution.y;
     ivec2 st = ivec2(fragCoord);
     
-    if (fragCoord.x > iResolution.y){
+    if (fragCoord.x > iResolution.y || fragCoord.x > 512.0 || fragCoord.y > 512.0){
         // will break on protrait aspect ratio -.-
         discard; // throw away the threads that are outside the simulation area
     }

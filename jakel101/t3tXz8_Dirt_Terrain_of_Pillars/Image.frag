@@ -13,7 +13,7 @@
 # define HEIGHT_SCALE 0.5
 
 // this is square but still depends on the canvas resolution!
-# define CELLS ivec2(min(iChannelResolution[0].x, iChannelResolution[0].y))
+# define CELLS ivec2(min(512.0,min(iChannelResolution[0].x, iChannelResolution[0].y)))
 
 // unsure yet where to bring this!
 # define SUN normalize(vec3(sin(iDate.w*0.05), cos(iTime*0.2), HEIGHT_SCALE*1.5))
@@ -24,7 +24,7 @@
 // FOV -1.0 for orthographic (sensor size)
 // FOV 90.0 for perspective wide
 // FOV 45.0 for perspective narower
-# define FOV 65.0
+# define FOV 90.0
 
 ivec2 worldToCell(vec3 p) {
     
@@ -125,6 +125,7 @@ vec3 terrain_palette(float h){
     
     //vec3(0.267, 0.133, 0.001); // ~#442200
     vec3 col = vec3(r,g,b);
+    col = clamp(col, vec3(0.0), vec3(1.0)); // ensure no negative or overbright colors!
     return col;
 }
 
@@ -167,33 +168,43 @@ vec4 raycast(vec3 ro, vec3 rd, inout float cloud_acc){
     vec4 box_hit = AABB(vec3(0.0, 0.0, HEIGHT_SCALE*0.5), vec3(1.0, 1.0, HEIGHT_SCALE*0.5), ro, rd);
     cloud_acc = 0.0;
     
+    //return ro.rgbb;
+    
     // miss or "inside" -.- TODO: got to figure out a better  check with normals maybe!
     vec3 entry_norm = vec3(0.0);
     entry_norm[abs(int(box_hit.z))-1] = sign(box_hit.z);
-    if ((box_hit.x > box_hit.y)){// && dot(rd, entry_norm) >= 0.0){
+    vec3 entry;
+    entry = ro + rd*(box_hit.x); // should be start "inside" the box
+    
+    
+    //return vec4(entry_norm+vec3(0.5), 1.0);
+    if ((box_hit.x > box_hit.y)){// && dot(rd, entry_norm) >= 0.0){ //  && box_hit.y > 0.0 //? none of these is exactly correct
         // if we "MISS" the whole box (not inside).
         //return vec4(entry_norm+vec3(0.5)*1.1, -1.0);
-        return vec4(vec3(0.2), -abs(box_hit.y));
-    }
-    else if (box_hit.x < 0.0){
-        ro += rd* 0.0002; // so we avoid being "inside" a pillar early?
+        return vec4(vec3(0.2, 0.8, 0.0), -abs(box_hit.y));
+    }   
+    else if (box_hit.y > 0.0){
+        //ro += rd* 0.0002; // so we avoid being "inside" a pillar early?
         // we are inside because the entry is behind the ro!
         //return vec4(vec3(rd), -1.0);
         //return vec4(vec3(ro), -1.0);
+        //return vec4(entry, -1.0);
         //return vec4(entry_norm+vec3(0.5), 1.0);
         //return vec4(vec3(0.2, 0.0, 0.8), -abs(box_hit.y));
+        //entry = ro; // if we are "inside" the entry should just be ro!
     }
     
     //return vec4(vec3(0.6), 1.0);
     
-    vec3 entry;
-    entry = ro + rd*(box_hit.x); // should be start "inside" the box
+    //return entry.rgbb;
+    
     ivec2 current_cell = worldToCell(entry); // TODO: this one is problematic!
     int i;
-    int max_depth = (CELLS.x + CELLS.y)+2; // could also be min!
+    ivec2 max_cells = CELLS - min(current_cell, CELLS-current_cell);
+    int max_depth = (max_cells.x + max_cells.y)+2; // could also be min!
     for (i = 0; i < max_depth; i++){        
         if (current_cell.x < 0 || current_cell.x >= CELLS.x ||
-            current_cell.y < 0 || current_cell.y >= CELLS.y) {
+            current_cell.y < 0 || current_cell.y >= CELLS.y){
             // we marched far enough are are "outside the box" now!
             return vec4(vec3(0.4), -abs(box_hit.y));
         }        
@@ -257,6 +268,10 @@ vec4 raycast(vec3 ro, vec3 rd, inout float cloud_acc){
             //return vec4(0.98, 0.821, 0.75, -abs(box_hit.y));
         }
         
+        if (hit.y >= box_hit.y){
+            return vec4(vec3(0.8), -abs(exit.y));
+        }
+        
         // the step
         ivec2 next_cell = current_cell + ivec2(exit_norm.xy);
         if (next_cell == current_cell){
@@ -273,7 +288,8 @@ vec4 raycast(vec3 ro, vec3 rd, inout float cloud_acc){
     }
     //return vec4(vec2(current_cell)/vec2(CELLS), 0.0, 0.0);
     // defualt "miss"? -> like we exit the box?
-    return vec4(vec3(1.0), -abs(box_hit.y));
+    cloud_acc = 0.0; // janky hack - I still need to figure out why this even reaches!
+    return vec4(vec3(1,0,0), -abs(box_hit.y));
 
 }
 
@@ -314,7 +330,9 @@ vec4 sampleGround(vec3 ro, vec3 rd){
     if (ground_dist < 0.0) {
         // essentially sky hit instead?
         // just some random skybox right now... could be improved of course!
-        return vec4(0.98, 0.79, 0.12, ground_dist)*exp(dot(SUN, rd));
+        vec3 col = vec3(0.98, 0.79, 0.12)*exp(dot(SUN, rd));        
+        col = clamp(col, vec3(0.0), vec3(1.0));
+        return vec4(col, 30.0); // some random distance that is positive!
     }
     
     vec3 ground_hit = ro + (rd * ground_dist);
@@ -340,8 +358,8 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     //return;
     
     // for when it's just idling...   
-    float azimuth = iTime*0.15 + mo.x; // keeps a bit of residue of the mouse!
-    float altitude = 0.7+cos(iTime*0.4)*0.15;      
+    float azimuth = iTime*0.1 + mo.x; // keeps a bit of residue of the mouse!
+    float altitude = 0.7+cos(iTime*0.25)*0.35;      
     if (sign(iMouse.z) > 0.0){
         // orbiting camera setup
         azimuth = PI*mo.x;
@@ -361,7 +379,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     
     
     // TODO moving the camera in and out over time??
-    camera_pos += look_dir * -1.0; // moving the camera "back" to avoid occlusions?
+    camera_pos += look_dir * -0.1; // moving the camera "back" to avoid occlusions?
     // two vectors orthogonal to this camera direction (tagents?)    
     //vec3 look_u = camera_pos + vec3(-sin(azimuth), cos(azimuth), 0.0);
     //vec3 look_v = camera_pos + vec3(sin(altitude)*-cos(azimuth), sin(altitude)*-sin(azimuth), cos(altitude));    
@@ -401,18 +419,24 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     }
     
     // actual stuff happening:
-    float cloud_sum;
+    float cloud_sum = 0.0;
     vec4 res = raycast(ray_origin, ray_dir, cloud_sum);
+    // fragColor = vec4(vec3(res.rgb),1.0);
+    //return; // early debug exit
     if (res.a < 0.0) {
         // we missed the initial terrain
-        res = sampleGround(ray_origin, ray_dir);        
+        res = sampleGround(ray_origin, ray_dir);
+        
+        // TODO: the skybox hit returns a negative distance, so we need to handle that
+        //res.a = abs(res.a);
     }
     vec3 hit = ray_origin + (ray_dir*res.a);
+            
     
     float shadow_cloud; // unused?
     vec4 ref = raycast(hit, SUN, shadow_cloud).rgba; //reflection (the full shadow)    
     ref.rgb *= 1.0 - step(0.0, ref.a); // this makes misses black?
-    
+    // ref.rgb *= 1.0-exp(-shadow_cloud*15.0); // more "realistic" cloud shadow?
     
     float shadow_amt = shadow(hit, SUN);
     // actually more light amount -.-
@@ -422,7 +446,9 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     // bad approximation of "beers law"?
     float cloud_term = clamp(1.0-exp(-cloud_sum*15.0), 0.0, 1.0);
     // additive/premultiplied merge here... could be wrong because not linear?
-    col = mix(col, vec3(cloud_term), cloud_term);
+    // transmittance isn't color - but that's the closest I have right here.
+    vec3 cloud_col = vec3(0.9*cloud_term); // so people are more happy about the premultiplication???
+    col = mix(col, cloud_col, cloud_term);
     
     // TODO: better "shadow" value via actually colored shadow??
     // vec3 col2 = res.rgb + ref.rgb*0.3;    
