@@ -19,6 +19,10 @@
 # define SUN normalize(vec3(sin(iDate.w*0.05), cos(iTime*0.2), HEIGHT_SCALE*1.1))
 // normalize(vec3(3.0, -5.0, 2.0))
 
+// playing with this, using my imgui parser - https://github.com/pygfx/shadertoy/pull/46
+# define CLOUD_DENSITY 20.0
+
+
 // horizontal FOV, if you use negative values the camera will be orthographic!
 // examples:
 // FOV -1.0 for orthographic (sensor size)
@@ -55,6 +59,7 @@ struct BoxHit{
 };
 
 // sorta reference: https://tavianator.com/2022/ray_box_boundary.html
+// TODO should be a HitInfo as the same will work for other intersections down the line.
 BoxHit AABB(vec3 center, vec3 size, Ray ray){
     BoxHit res;
         
@@ -104,6 +109,19 @@ BoxHit pillar_hits(ivec2 cell, float height, Ray ray){
     BoxHit res = AABB(p, extend, ray);
     return res;
 }
+
+
+float transmittance(float dist){
+    // ref video https://youtu.be/Qj_tK_mdRcA
+    
+    // bad approximation of "beers law"? (macro for absorption)
+    float trans = exp(-dist*CLOUD_DENSITY);
+    
+    trans = clamp(trans, 0.0, 1.0);
+    // this is meant as a transmittance: 1.0 means we see through the cloud and 0.0 means we don't.
+    return trans;
+}
+
 
 
 vec3 terrain_palette(float h){
@@ -157,13 +175,13 @@ float sampleClouds(ivec2 cell){
     return res;    
 }
 
-vec4 raycast(Ray ray, inout float cloud_acc){
+vec4 raycast(Ray ray, inout vec2 clouds){
     // cast the ray untill there is a hit or we exit the box
     // "any hit" shader?
     // returns tex + dist, negative dist means a "miss"
     // the inout for clouds sums up it's distance and depth of clouds.
     BoxHit box = AABB(vec3(0.0, 0.0, HEIGHT_SCALE*0.5), vec3(1.0, 1.0, HEIGHT_SCALE*0.5), ray);
-    cloud_acc = 0.0;
+    clouds = vec2(0.0, 0.0);
     
     vec3 entry = box.entry;
     
@@ -197,10 +215,18 @@ vec4 raycast(Ray ray, inout float cloud_acc){
         if (cloud_depth < 0.){ // cand adjust how "many" clouds here!
             // only if there is a cloud we even consider this
             BoxHit cloud = pillar_hits(current_cell, (cloud_depth*0.2), ray);
-            if (cloud.hit){
+            if (cloud.hit){                
+                // for transmittance we accumulate the distance
+                clouds.x += (distance(cloud.entry,cloud.exit)); // +(cloud_depth*0.001)); // add some random variation?
                 
-                // we scale the cloud by how much of it we traversed plus the inverse dpeth (~= color)?
-                cloud_acc += (1.0 - cloud_depth)*(distance(cloud.entry,cloud.exit));
+                // the "color" of clouds is based on the depth, scaled by the already accumulated transmittance
+                // sorta the distance to the sun, exit because entry can be at the top
+                // and how much of an angle the sun was at...
+                // the idea is to sum up how much "light" this has accumulated.
+                float hit_depth = (HEIGHT_SCALE-cloud.exit.z);
+                float sun_angle = clamp(dot(SUN, vec3(0.0,0.0,1.0)), 0.0, 1.0);
+                clouds.y += abs(cloud_depth*transmittance(clouds.x)*sun_angle*transmittance(hit_depth));
+                
                 // TODO use cloud.inside to increase the scale? (try to remove the moire pattern)
                 //return vec4(vec3((1.0 - cloud_depth)), 0.0*abs(cloud_hit.x));
             }
@@ -243,7 +269,7 @@ vec4 raycast(Ray ray, inout float cloud_acc){
     }
     //return vec4(vec2(current_cell)/vec2(CELLS), 0.0, 0.0);
     // defualt "miss"? -> like we exit the box?
-    cloud_acc = 0.0; // janky hack - I still need to figure out why this even reaches!
+    
     return vec4(vec3(1,0,0), -abs(box.exit_dist));
 
 }
@@ -254,15 +280,15 @@ float shadow(Ray sun_ray){
     // we are now marching upwards from some hit
     // ro is essentially the point we started from
     // rd is the sun angle
-    float cloud_term;
-    vec4 res = raycast(sun_ray, cloud_term);
+    vec2 cloud_values;
+    vec4 res = raycast(sun_ray, cloud_values);
     //return res.a;
     if (res.a < 0.0){// || (ro + rd*res.a).z >= HEIGHT_SCALE){
         // likely means outside the box/ground!
         // so think like "skylight"        
-        cloud_term = clamp(1.0-exp(-cloud_term*15.0), 0.0, 1.0);
+        float cloud_transmittance = transmittance(cloud_values.x);
         // full sunlight        
-        return 1.0 -cloud_term;
+        return cloud_transmittance;
     }    
     else {
         return 0.0;
@@ -376,8 +402,8 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     Ray camera = Ray(ray_origin, ray_dir, 1.0/ray_dir);
     
     // actual stuff happening:
-    float cloud_sum = 0.0;
-    vec4 res = raycast(camera, cloud_sum);
+    vec2 cloud_val;
+    vec4 res = raycast(camera, cloud_val);
     // fragColor = vec4(vec3(res.rgb),1.0);
     //return; // early debug exit
     if (res.a < 0.0) {
@@ -392,8 +418,8 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     // TODO: offset the ro a bit?
     Ray sun_check = Ray(hit+0.001*SUN, SUN, 1.0/SUN);
     
-    float shadow_cloud; // unused?
-    vec4 ref = raycast(sun_check, shadow_cloud).rgba; //reflection (the full shadow)    
+    vec2 cloud_foo; // unused?
+    vec4 ref = raycast(sun_check, cloud_foo).rgba; //reflection (the full shadow)    
     ref.rgb *= 1.0 - step(0.0, ref.a); // this makes misses black?
     // ref.rgb *= 1.0-exp(-shadow_cloud*15.0); // more "realistic" cloud shadow?
     
@@ -401,13 +427,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     // actually more light amount -.-
     // so we add and "ambient" base like here
     vec3 col = res.rgb * max(0.3, shadow_amt);
-    
-    // bad approximation of "beers law"?
-    float cloud_term = clamp(1.0-exp(-cloud_sum*15.0), 0.0, 1.0);
-    // additive/premultiplied merge here... could be wrong because not linear?
-    // transmittance isn't color - but that's the closest I have right here.
-    vec3 cloud_col = vec3(0.9*cloud_term); // so people are more happy about the premultiplication???
-    col = mix(col, cloud_col, cloud_term);
+
+    float cloud_trans = transmittance(cloud_val.x);
+    vec3 cloud_col = vec3(1.0 - cloud_val.y*0.25); // *(1.0-cloud_trans); // no more alphapremultiplication...
+    col = mix(col, cloud_col, 1.0-cloud_trans);
     
     // TODO: better "shadow" value via actually colored shadow??
     // vec3 col2 = res.rgb + ref.rgb*0.3;    

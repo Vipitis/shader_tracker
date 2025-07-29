@@ -28,7 +28,7 @@ uvec2 pcg2d(uvec2 v)
 float hash21(in vec2 a){
     uvec2 b = uvec2(floatBitsToUint(a.x), floatBitsToUint(a.y));
     uvec2 c = pcg2d(b);
-    float r = float(c.x)/float(-1u); // seems to work I guess... but don't we lose a lot of data??
+    float r = float(c.x)/float(uint(-1)); // seems to work I guess... but don't we lose a lot of data??
     // fract(uintBitsToFloat(c.x)) // this one causes issues due to NaN or something, results in black spots in the noise
     return r;
 }
@@ -157,7 +157,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     else {
         // let's have some fun!
         float clouds = fbm(uv*4.0+vec2(-iTime*0.3));
-
+                
         prev.y = clouds;
         // press spacebar to toggle water sim (rain, gravity and evaporation) on/off... stars on on.
         if (texelFetch(iChannel1, ivec2(32, 2), 0).x<0.5){
