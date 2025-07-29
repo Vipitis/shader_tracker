@@ -52,6 +52,16 @@ float noise(in vec2 a){
                mix(tl, tr, s.x), s.y);
 }
 
+
+float noise3d(in vec3 a){
+    // isn't smooth -.-
+    float n1 = noise(a.xy);
+    float n2 = noise(a.xy+vec2(1.0));
+    
+    float s = smoothstep(0.0, 1.0, fract(a.z));
+    return mix(n1, n2, 1.0);
+}
+
 // via https://thebookofshaders.com/13/
 float fbm(in vec2 p){
     
@@ -71,8 +81,27 @@ float fbm(in vec2 p){
         
     }
     return res;
-    
 }
+
+float fbm3(in vec3 p){
+    // parameters
+    int octaves = 8;
+    float l = 2.0;
+    float g = 0.5;
+    
+    // initial values
+    float a = 0.5;
+    float f = 1.0;
+    float res = 0.0;
+    for(int i = 0; i < octaves; i++){
+        res += a * noise3d(p*f);
+        f *= l;
+        a *= g;
+        
+    }
+    return res;
+}
+
 
 vec4 init_terrain(vec2 uv, float time_seed){
     // initialize the terrain?
@@ -96,8 +125,10 @@ vec4 init_terrain(vec2 uv, float time_seed){
 vec2 simulate_water(ivec2 pos){
     // do we get the clouds to know where it rains?
     vec4 old = texelFetch(iChannel0, pos, 0); // these could be passed in?                
-    float old_water = old.z;  
+    float old_water = old.z;
     float old_height = old.x;
+    float old_cloud = old.y; // can we evaporate to collect and rain to lose cloud?
+    float old_wind = old.w; // like radians or amplitude?
     
     float evaporation = iTimeDelta*(max(0.0,((3.5*old_height)-0.3)));        
     old_water *= (1.0-evaporation);
@@ -109,7 +140,7 @@ vec2 simulate_water(ivec2 pos){
     
     // rain, toggle with R
     float rain_toggle = 1.0 - texelFetch(iChannel1, ivec2(82, 2), 0).x;   
-    if (old.y < 0.2) {
+    if (old_cloud < 0.2) {
         // could be based on cloud thickness, maybe even drain the clouds?
         water_change += iTimeDelta*0.1*rain_toggle;
     }   
@@ -156,7 +187,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     }
     else {
         // let's have some fun!
-        float clouds = fbm(uv*4.0+vec2(-iTime*0.3));
+        float clouds = fbm(uv*5.0+vec2(-iTime*0.3, iDate.w*0.2)); //
                 
         prev.y = clouds;
         // press spacebar to toggle water sim (rain, gravity and evaporation) on/off... stars on on.
