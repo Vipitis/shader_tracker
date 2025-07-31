@@ -275,6 +275,7 @@ vec4 raycast(Ray ray, inout vec2 clouds){
 }
 
 // more like a bad shadowmap
+// idea for the future: precompute the horizon per pixel: https://youtu.be/LluCbGdi-RM
 float shadow(Ray sun_ray){
     // return the amount of shadowed?
     // we are now marching upwards from some hit
@@ -339,8 +340,8 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     //return;
     
     // for when it's just idling...   
-    float azimuth = iTime*0.1 + mo.x; // keeps a bit of residue of the mouse!
-    float altitude = 0.7+cos(iTime*0.25)*0.35;      
+    float azimuth = -1.9+iTime*0.1 + mo.x; // keeps a bit of residue of the mouse!
+    float altitude = 0.7+cos(1.5+iTime*0.25)*0.35;      
     if (sign(iMouse.z) > 0.0){
         // orbiting camera setup
         azimuth = PI*mo.x;

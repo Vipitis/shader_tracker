@@ -6,6 +6,8 @@
 // R - Rain for low clouds toggle on/off :: defualt:on
 
 
+# define OCTAVES 8
+
 // from https://www.shadertoy.com/view/XlGcRh
 uvec2 pcg2d(uvec2 v)
 {
@@ -55,18 +57,19 @@ float noise(in vec2 a){
 
 float noise3d(in vec3 a){
     // isn't smooth -.-
-    float n1 = noise(a.xy);
-    float n2 = noise(a.xy+vec2(1.0));
+    float i = floor(a.z);
+    float n1 = noise(a.xy+vec2(i));
+    float n2 = noise(a.xy+vec2(i+1.0));
     
     float s = smoothstep(0.0, 1.0, fract(a.z));
-    return mix(n1, n2, 1.0);
+    return mix(n1, n2, s);
 }
 
 // via https://thebookofshaders.com/13/
 float fbm(in vec2 p){
     
     // parameters
-    int octaves = 8;
+    int octaves = OCTAVES;
     float l = 2.0;
     float g = 0.5;
     
@@ -85,7 +88,7 @@ float fbm(in vec2 p){
 
 float fbm3(in vec3 p){
     // parameters
-    int octaves = 8;
+    int octaves = OCTAVES;
     float l = 2.0;
     float g = 0.5;
     
@@ -130,7 +133,8 @@ vec2 simulate_water(ivec2 pos){
     float old_cloud = old.y; // can we evaporate to collect and rain to lose cloud?
     float old_wind = old.w; // like radians or amplitude?
     
-    float evaporation = iTimeDelta*(max(0.0,((3.5*old_height)-0.3)));        
+    // maybe only evaporate if there isn't clouds?
+    float evaporation = iTimeDelta*(max(0.0,(4.5*old_height)-0.3));        
     old_water *= (1.0-evaporation);
     
     
@@ -140,9 +144,10 @@ vec2 simulate_water(ivec2 pos){
     
     // rain, toggle with R
     float rain_toggle = 1.0 - texelFetch(iChannel1, ivec2(82, 2), 0).x;   
-    if (old_cloud < 0.2) {
+    if (old_cloud < 0.25) {
         // could be based on cloud thickness, maybe even drain the clouds?
-        water_change += iTimeDelta*0.1*rain_toggle;
+        float rain_amount = abs(min(0.0, (old_cloud - 0.25)));
+        water_change += iTimeDelta*rain_amount*rain_toggle;
     }   
     
     // REDO with a loop
@@ -158,6 +163,7 @@ vec2 simulate_water(ivec2 pos){
     water_change /= float(neighbors.length()); // does this need to be normalized?
     
     
+    // motivated by the ideas here: https://www.youtube.com/watch?v=eaXk97ujbPQ
     // erosion demo: toggle with E
     float erotion_toggle = texelFetch(iChannel1, ivec2(69, 2), 0).x;   
     height_change = -water_change*0.2*erotion_toggle; // erosion like this?
@@ -175,7 +181,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     vec2 uv = (fragCoord * 2.0 - iResolution.xy)/iResolution.y;
     ivec2 st = ivec2(fragCoord);
     
-    if (fragCoord.x > iResolution.y || fragCoord.x > 512.0 || fragCoord.y > 512.0){
+    if (fragCoord.x > iResolution.y || fragCoord.x > 512.5 || fragCoord.y > 512.5){
         // will break on protrait aspect ratio -.-
         discard; // throw away the threads that are outside the simulation area
     }
@@ -187,7 +193,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     }
     else {
         // let's have some fun!
-        float clouds = fbm(uv*5.0+vec2(-iTime*0.3, iDate.w*0.2)); //
+        float clouds = fbm3(vec3(uv*5.0+vec2(-iTime*0.2),iTime*0.1)); //
                 
         prev.y = clouds;
         // press spacebar to toggle water sim (rain, gravity and evaporation) on/off... stars on on.
@@ -195,6 +201,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
             prev.xz = simulate_water(st);
         }
     }
+    prev = clamp(prev, vec4(0.0), vec4(1.0)); // maybe that fixes the big black box showing up sometimes?
     
     
     
