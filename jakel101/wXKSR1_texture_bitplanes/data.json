@@ -1,0 +1,50 @@
+{
+  "ver": "0.1",
+  "info": {
+    "id": "wXKSR1",
+    "date": "1754246850",
+    "viewed": 22,
+    "name": "texture bitplanes",
+    "username": "jakel101",
+    "description": "https://en.wikipedia.org/wiki/Bit_plane somehow came up on Discord... here we show the reconstructed uin8 bitplanes but split into RGBA channels.\n\nbot left is Red, bot right is Green, top left is Blue and top right is Alpha!",
+    "likes": 1,
+    "published": 3,
+    "flags": 0,
+    "usePreview": 0,
+    "tags": [
+      "bitplane"
+    ],
+    "hasliked": 0,
+    "retrieved": "2025-08-04T20:19:48.729231+00:00"
+  },
+  "renderpass": [
+    {
+      "inputs": [
+        {
+          "id": 5,
+          "src": "/media/a/8de3a3924cb95bd0e95a443fff0326c869f9d4979cd1d5b6e94e2a01f5be53e9.jpg",
+          "ctype": "texture",
+          "channel": 0,
+          "sampler": {
+            "filter": "mipmap",
+            "wrap": "repeat",
+            "vflip": "true",
+            "srgb": "false",
+            "internal": "byte"
+          },
+          "published": 1
+        }
+      ],
+      "outputs": [
+        {
+          "id": 37,
+          "channel": 0
+        }
+      ],
+      "code": "void mainImage( out vec4 fragColor, in vec2 fragCoord )\n{\n    // Normalized pixel coordinates (from 0 to 2)\n    vec2 uv = fragCoord/iResolution.xy;\n    uv*= 2.0;\n    int channel = int(uv.x)*2 + int(uv.y);\n    uv = fract(uv);    \n    vec4 tex = texture(iChannel0, uv);\n    // wrange the texture back int uint8 representation\n    int val = int(tex[channel]*255.0);\n    \n    int bit = (iFrame/30)%8; // lower this 30 to make your eyes hurt!\n    val = (val >> bit) & 1;\n    \n    // as val is either 0 or 1 we don't need to scale up again to 255\n    vec4 col = vec4(val);\n    fragColor = vec4(col);\n}",
+      "name": "Image",
+      "description": "",
+      "type": "image"
+    }
+  ]
+}

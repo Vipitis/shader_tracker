@@ -56,7 +56,6 @@ float noise(in vec2 a){
 
 
 float noise3d(in vec3 a){
-    // isn't smooth -.-
     float i = floor(a.z);
     float n1 = noise(a.xy+vec2(i));
     float n2 = noise(a.xy+vec2(i+1.0));
@@ -111,12 +110,13 @@ vec4 init_terrain(vec2 uv, float time_seed){
 
     vec4 start;
     // we don't do anything interesting here :(
-    float height = fbm(uv*3.0+vec2(time_seed*0.2));    
+    float height = fbm(uv*3.0+vec2(time_seed*0.2));
+    
     // let's have some fun!
     float clouds = fbm(uv*4.0+vec2(-time_seed*0.1));
     
     // water as an amount, not a height.
-    float water = max(0.0, 0.3-height);
+    float water = max(0.0, 0.2-height);
 
     // alpha channel currently not used...
     start = vec4(vec3(height, clouds, water),1.0);
@@ -134,13 +134,14 @@ vec2 simulate_water(ivec2 pos){
     float old_wind = old.w; // like radians or amplitude?
     
     // maybe only evaporate if there isn't clouds?
-    float evaporation = iTimeDelta*(max(0.0,(4.5*old_height)-0.3));        
-    old_water *= (1.0-evaporation);
+    float evaporation = iTimeDelta*(max(0.0,(3.5*old_height)-0.3));
+    old_water *= (1.0-evaporation); // or last?
     
-    
-    float water_level = old_height + old_water;
+    float water_level = old_height + old_water;    
     float water_change = 0.0; // the amount "added" or removed
-    float height_change = 0.0; 
+    float height_change = 0.0; //erosion and deposition!
+       
+    
     
     // rain, toggle with R
     float rain_toggle = 1.0 - texelFetch(iChannel1, ivec2(82, 2), 0).x;   
@@ -150,24 +151,28 @@ vec2 simulate_water(ivec2 pos){
         water_change += iTimeDelta*rain_amount*rain_toggle;
     }   
     
-    // REDO with a loop
+    // just 4 neighbors is hopefully fine, all 8 would require some sqrt(2) scaling?
     ivec2 neighbors[4] = ivec2[4] (ivec2(1,0), ivec2(-1,0), ivec2(0,1), ivec2(0,-1));
+    //ivec2 neighbors[8] = ivec2[8] (ivec2(1,0), ivec2(1,1), ivec2(0,1), ivec2(-1,1), ivec2(-1,0), ivec2(-1,-1), ivec2(0,-1), ivec2(1,-1));
     int i;
     for (i=0; i<neighbors.length(); i++){        
         vec4 n = texelFetch(iChannel0, pos+neighbors[i], 0);
-        float n_level = n.x + n.z;
-        float water_diff = n_level - water_level;        
+        //float slope = n.x - old_height;
+        float n_level = n.x + n.z; // terrain height + water height
+        float water_diff = n_level - water_level;
         water_change += clamp(water_diff, -old_water, n.z);
+        //height_change += -water_diff*slope; // this is not it -.-
     }
     
     water_change /= float(neighbors.length()); // does this need to be normalized?
+    height_change /= float(neighbors.length());
     
     
     // motivated by the ideas here: https://www.youtube.com/watch?v=eaXk97ujbPQ
     // erosion demo: toggle with E
-    float erotion_toggle = texelFetch(iChannel1, ivec2(69, 2), 0).x;   
-    height_change = -water_change*0.2*erotion_toggle; // erosion like this?
-    
+    float erosion_toggle = texelFetch(iChannel1, ivec2(69, 2), 0).x;   
+    height_change += -(old_water*water_change);
+    height_change *= erosion_toggle;
     
     return vec2(old_height + height_change, old_water + water_change);
 }

@@ -4,9 +4,8 @@
 // with a couple tweaks to make it work for this example :)
 
 // SOME BUGS: (or todos)
-// the raycast doesn't work "upwards" as expected. so camera stays outside and orbiting
-// clouds are composited ontop and don't care for order or distance (so they 
 // clouds have a strong moire pattern because traversal abbrpuptly begins at the top plane
+// some water seems to get green side texture?
 
 # define PI 3.141592653
 // tweaked with 0.5 in mind others could look wonky...
@@ -349,7 +348,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     }
     
     // make sure you don't look "below"
-    altitude = clamp(altitude, HEIGHT_SCALE*0.5, PI);
+    altitude = clamp(altitude, HEIGHT_SCALE*0.2, PI);
     
     // a unit length orbit!
     vec3 camera_pos = vec3(
@@ -429,8 +428,15 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     // so we add and "ambient" base like here
     vec3 col = res.rgb * max(0.3, shadow_amt);
 
+
+    // distance fog? I don't like it so it's commented out
+    // float dist_fog = transmittance(res.a *0.015);
+    // vec3 fog_col = vec3(0.4, 0.5, 0.9);
+    // col = mix(col, fog_col, 1.0-dist_fog);
+    
+
     float cloud_trans = transmittance(cloud_val.x);
-    vec3 cloud_col = vec3(1.0 - cloud_val.y*0.25); // *(1.0-cloud_trans); // no more alphapremultiplication...
+    vec3 cloud_col = vec3(1.0 - cloud_val.y*0.35); // *(1.0-cloud_trans); // no more alphapremultiplication...
     col = mix(col, cloud_col, 1.0-cloud_trans);
     
     // TODO: better "shadow" value via actually colored shadow??
