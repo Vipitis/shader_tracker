@@ -1,7 +1,7 @@
 # define LIFE 6
 // linetime of 2^n seconds per beat. Meant to be 6, but 0 or 1 can be used for testing
 
-# define BPM 85.0
+# define BPM 65.0
 // change, recompile, play and then rewind!
 
 

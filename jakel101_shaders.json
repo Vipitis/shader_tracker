@@ -1,6 +1,6 @@
 {
   "userName": "jakel101",
-  "date": "2025-08-04T20:19:48.729231+00:00",
+  "date": "2025-08-09T21:42:21.238037+00:00",
   "numShaders": 57,
   "shaders": [
     {
@@ -8,11 +8,11 @@
       "info": {
         "id": "wXVSR1",
         "date": "1754338508",
-        "viewed": 2,
+        "viewed": 47,
         "name": "Double Pendulum Datacube",
         "username": "jakel101",
         "description": "this idea came when I watched https://youtu.be/9gQQAO4I1Ck\nthe screenspace essentially picks different initial conditions, keeping track of position and momentum for the inner and outer pendulum. use mouse to inspect a specific pendulum!\n",
-        "likes": 0,
+        "likes": 3,
         "published": 3,
         "flags": 32,
         "usePreview": 0,
@@ -23,7 +23,7 @@
           "datacube"
         ],
         "hasliked": 0,
-        "retrieved": "2025-08-04T20:19:48.729231+00:00"
+        "retrieved": "2025-08-09T21:42:21.238037+00:00"
       },
       "renderpass": [
         {
@@ -91,7 +91,7 @@
               "channel": 0
             }
           ],
-          "code": "// this buffer does the physics simulation\n// outputs are as follows\n// .x position of the inner pendulum\n// .y rotational speed of the inner pendulum\n// .z position of the outer pendulum (in half rotations from the bottom) left/clockwise is negative\n// .w rotational speed of the outer pendulum clockwise is negative\n\n// substeps still scale the same time, but should be more \"accurate\" but results in why more noise too\n// energy is kept longer, breaks on really high numbers like > 110 or something :/\n#define SUBSTEPS 32\n// this can be changed to make it go \"faster\"\n#define GRAVITY -9.8\n\nvec4 init(vec2 uv) {\n    // this let's you set the initial conditions in relation to screenspace, so play around here and have fun\n    // requiers you to rewind time!\n    vec4 vals;\n    \n    vals.xz = uv; // rotation position\n    vals.yw = vec2(0.0); // start with 0 momentum!\n    //vals.xz = vec2(1.0); // start at the top\n    \n    // vals.x = 0.0; //for testing the outer part is just hanging\n    vals.yw = uv.yx*5.1; // add a lot of momentum!\n    \n    //vals.wy = uv*0.01; // really close initial conditions (start athe the top)\n    \n    \n    return vals;\n}\n\n// not used, left over from development!\nvoid simulate_single(inout vec2 pos, inout vec2 vel, float dt){\n    // assume the mass is 1!\n    vel.y += GRAVITY *dt;\n    \n    vec2 new_pos = pos + vel * dt;\n    // constraints\n    \n    // assume length is 1 and fixed to the origin\n    float error = 1.0 - length(new_pos);\n    vec2 corr = new_pos * -1.0 * error;\n\n    new_pos -= corr;\n\n    vec2 next_vel = (new_pos - pos) / dt;\n\n    // outputs\n    pos = new_pos;\n    vel = next_vel;\n}\n\n\nvoid simulate_double(float dt, inout vec2 pos_i, inout vec2 vel_i, inout vec2 pos_o, inout vec2 vel_o){\n    // reference: https://github.com/matthias-research/pages/blob/master/tenMinutePhysics/06-pendulumShort.html MIT licnesed\n    vec2 new_pos_i;\n    vec2 new_vel_i;\n    vec2 new_pos_o;\n    vec2 new_vel_o;\n    \n    // step 1 apply gravity\n    vel_i.y += GRAVITY *dt;\n    vel_o.y += GRAVITY *dt;\n    new_pos_i = pos_i + vel_i * dt;\n    new_pos_o = pos_o + vel_o * dt;\n    \n    // step 2 constraints:\n    // assume masses and lengths is 1\n    // inner is fixed to 0,0 and outer is attached to inner    \n    vec2 delta = new_pos_o - new_pos_i;\n    float error_o = 1.0 - length(delta);\n    vec2 corr_i = error_o * -0.5 * delta; // 0.5 is the inverse mass\n    vec2 corr_o = error_o * -0.5 * delta;    \n    new_pos_i += corr_i; // one adds and one subtracts.. to move them towards their targets\n    new_pos_o -= corr_o;\n    \n    // TODO: is this order correct?\n    float error_i = 1.0 - length(new_pos_i);\n    corr_i = new_pos_i * -1.0 * error_i;\n    new_pos_i -= corr_i;\n    \n    \n    // step3 derive new velocities\n    new_vel_i = (new_pos_i - pos_i) /dt;\n    new_vel_o = (new_pos_o - pos_o) /dt;\n        \n    \n    //return not needed but we use inouts\n    pos_i = new_pos_i;\n    vel_i = new_vel_i;\n    pos_o = new_pos_o;\n    vel_o = new_vel_o;\n}\n\n// lets first try a single pendulumn!\nvec2 single(float a, float v){\n    // reference: https://youtu.be/XPZEeS70zzU\n\n    // returns them as polar again?\n    vec2 new;\n    vec2 pos = Polar2Cartesian(a, 1.0);\n    vec2 orth = Polar2Cartesian(a + 0.5, 1.0); // just an orthogonal vector we then scale\n    vec2 vel = orth*v;\n    \n    int i;\n    float dt = (iTimeDelta/float(SUBSTEPS));\n    for (i=0; i<SUBSTEPS; i++){\n        simulate_single(pos, vel, dt);\n    }    \n    vec2 new_pos = pos;\n    vec2 new_vel = vel;\n    \n    // reproject to polar coordinates:    \n    new.x = Cartesian2Polar(new_pos).x;\n    \n    vec2 next_orth = Polar2Cartesian(new.x + 0.5, 1.0);\n    new.y = length(new_vel)*sign(dot(new_vel,next_orth));\n    new.y = dot(new_vel, next_orth);\n    return new;\n}\n\nvec4 double_pendulum(vec4 state){\n    // decode positions and velocities\n    float lenght_i = 1.0;\n    float length_o = 1.0;\n    //TODO where do we put the lengths?\n    float angle_i = state.x;\n    float momentum_i = state.y;                \n    vec2 pos_i = Polar2Cartesian(angle_i, lenght_i);\n    vec2 vel_i = Polar2Cartesian(angle_i+0.5, 1.0)*momentum_i;\n    \n    float angle_o = state.z;\n    float momentum_o = state.w;\n    vec2 pos_o = Polar2Cartesian(angle_o, length_o);\n    pos_o = pos_i + pos_o; // because the polar coordinates were centered.\n    vec2 vel_o = Polar2Cartesian(angle_o+0.5, 1.0)*momentum_o;\n    vel_o = vel_i + vel_o;\n    \n    int i;\n    float dt = (iTimeDelta/float(SUBSTEPS));\n    for (i=0; i<SUBSTEPS; i++){\n        // sanity check here\n        //simulate_single(pos_i, vel_i, dt);\n        //simulate_single(pos_o, vel_o, dt);\n        simulate_double(dt, pos_i, vel_i, pos_o, vel_o);\n    }\n    \n    // reproject to polar coordinates:\n    vec2 next_i;\n    next_i.x = Cartesian2Polar(pos_i).x;\n    vec2 orth_i = Polar2Cartesian(next_i.x+0.5, 1.0);\n    next_i.y = length(vel_i)*sign(dot(vel_i,orth_i));\n    next_i.y = dot(vel_i, orth_i);\n    \n    vec2 next_o;\n    vec2 pos_o_rel = pos_o - pos_i; // we only store the relative position and motion of the outer pendulum\n    next_o.x = Cartesian2Polar(pos_o_rel).x;\n    vec2 orth_o = Polar2Cartesian(next_o.x+0.5, 1.0);\n    vec2 vel_o_rel = vel_o - vel_i;\n    next_o.y = length(vel_o_rel)*sign(dot(vel_o_rel,orth_o));\n    next_o.y = dot(vel_o_rel, orth_o);\n    \n    // fix the one element for testing\n    //next_i = vec2(0.0, 0.0);\n    //next_o = vec2(0.0, 0.0);\n    vec4 new_state = vec4(next_i, next_o);\n    return new_state;\n}\n\nvoid mainImage( out vec4 fragColor, in vec2 fragCoord )\n{\n    // Normalized pixel coordinates (from -1..1)\n    vec2 uv = fragCoord/iResolution.xy;\n    uv *= 2.0;\n    uv -= 1.0;\n    \n    ivec2 st = ivec2(fragCoord);\n    vec4 prev = texelFetch(iChannel0, st, 0);\n    if (iFrame < 2) {\n        prev = init(uv);        \n    }\n    //vec4 next = single(prev.x, prev.y).xyxy;\n    vec4 next = double_pendulum(prev);\n    //next.zw = vec2(0.0,0.0);\n    //next = simulate(prev.xy, prev.zw, iTimeDelta);\n    \n       \n    vec4 col = vec4(next);\n    \n    fragColor = vec4(col);\n}",
+          "code": "// this buffer does the physics simulation\n// outputs are as follows\n// .x position of the inner pendulum\n// .y rotational speed of the inner pendulum\n// .z position of the outer pendulum (in half rotations from the bottom) left/clockwise is negative\n// .w rotational speed of the outer pendulum clockwise is negative\n\n// substeps still scale the same time, but should be more \"accurate\" but results in why more noise too\n// energy is kept longer, breaks on really high numbers like > 110 or something :/\n#define SUBSTEPS 32\n// this can be changed to make it go \"faster\"\n#define GRAVITY -9.8\n\nvec4 init(vec2 uv) {\n    // this let's you set the initial conditions in relation to screenspace, so play around here and have fun\n    // requiers you to rewind time!\n    vec4 vals;\n    \n    vals.xz = uv; // rotation position\n    vals.yw = vec2(0.0); // start with 0 momentum!\n    //vals.xz = vec2(1.0); // start at the top\n    \n    // vals.x = 0.0; //for testing the outer part is just hanging\n    vals.yw = uv.yx*6.1; // add a lot of momentum!\n    \n    \n    //vals.wy = uv*0.01; // really close initial conditions (start athe the top)\n    \n    vals.y *= -1.0; // little flip so the default mouse position looks more interesting!\n    return vals;\n}\n\n// not used, left over from development!\nvoid simulate_single(inout vec2 pos, inout vec2 vel, float dt){\n    // assume the mass is 1!\n    vel.y += GRAVITY *dt;\n    \n    vec2 new_pos = pos + vel * dt;\n    // constraints\n    \n    // assume length is 1 and fixed to the origin\n    float error = 1.0 - length(new_pos);\n    vec2 corr = new_pos * -1.0 * error;\n\n    new_pos -= corr;\n\n    vec2 next_vel = (new_pos - pos) / dt;\n\n    // outputs\n    pos = new_pos;\n    vel = next_vel;\n}\n\n\nvoid simulate_double(float dt, inout vec2 pos_i, inout vec2 vel_i, inout vec2 pos_o, inout vec2 vel_o){\n    // reference: https://github.com/matthias-research/pages/blob/master/tenMinutePhysics/06-pendulumShort.html MIT licnesed\n    vec2 new_pos_i;\n    vec2 new_vel_i;\n    vec2 new_pos_o;\n    vec2 new_vel_o;\n    \n    // step 1 apply gravity\n    vel_i.y += GRAVITY *dt;\n    vel_o.y += GRAVITY *dt;\n    new_pos_i = pos_i + vel_i * dt;\n    new_pos_o = pos_o + vel_o * dt;\n    \n    // step 2 constraints:\n    // assume masses and lengths is 1\n    // inner is fixed to 0,0 and outer is attached to inner    \n    vec2 delta = new_pos_o - new_pos_i;\n    float error_o = 1.0 - length(delta);\n    vec2 corr_i = error_o * -0.5 * delta; // 0.5 is the inverse mass\n    vec2 corr_o = error_o * -0.5 * delta;    \n    new_pos_i += corr_i; // one adds and one subtracts.. to move them towards their targets\n    new_pos_o -= corr_o;\n    \n    // TODO: is this order correct?\n    float error_i = 1.0 - length(new_pos_i);\n    corr_i = new_pos_i * -1.0 * error_i;\n    new_pos_i -= corr_i;\n    \n    \n    // step3 derive new velocities\n    new_vel_i = (new_pos_i - pos_i) /dt;\n    new_vel_o = (new_pos_o - pos_o) /dt;\n        \n    \n    //return not needed but we use inouts\n    pos_i = new_pos_i;\n    vel_i = new_vel_i;\n    pos_o = new_pos_o;\n    vel_o = new_vel_o;\n}\n\n// lets first try a single pendulumn!\nvec2 single(float a, float v){\n    // reference: https://youtu.be/XPZEeS70zzU\n\n    // returns them as polar again?\n    vec2 new;\n    vec2 pos = Polar2Cartesian(a, 1.0);\n    vec2 orth = Polar2Cartesian(a + 0.5, 1.0); // just an orthogonal vector we then scale\n    vec2 vel = orth*v;\n    \n    int i;\n    float dt = (iTimeDelta/float(SUBSTEPS));\n    for (i=0; i<SUBSTEPS; i++){\n        simulate_single(pos, vel, dt);\n    }    \n    vec2 new_pos = pos;\n    vec2 new_vel = vel;\n    \n    // reproject to polar coordinates:    \n    new.x = Cartesian2Polar(new_pos).x;\n    \n    vec2 next_orth = Polar2Cartesian(new.x + 0.5, 1.0);\n    new.y = length(new_vel)*sign(dot(new_vel,next_orth));\n    new.y = dot(new_vel, next_orth);\n    return new;\n}\n\nvec4 double_pendulum(vec4 state){\n    // decode positions and velocities\n    float lenght_i = 1.0;\n    float length_o = 1.0;\n    //TODO where do we put the lengths?\n    float angle_i = state.x;\n    float momentum_i = state.y;                \n    vec2 pos_i = Polar2Cartesian(angle_i, lenght_i);\n    vec2 vel_i = Polar2Cartesian(angle_i+0.5, 1.0)*momentum_i;\n    \n    float angle_o = state.z;\n    float momentum_o = state.w;\n    vec2 pos_o = Polar2Cartesian(angle_o, length_o);\n    pos_o = pos_i + pos_o; // because the polar coordinates were centered.\n    vec2 vel_o = Polar2Cartesian(angle_o+0.5, 1.0)*momentum_o;\n    vel_o = vel_i + vel_o;\n    \n    int i;\n    float dt = (iTimeDelta/float(SUBSTEPS));\n    for (i=0; i<SUBSTEPS; i++){\n        // sanity check here\n        //simulate_single(pos_i, vel_i, dt);\n        //simulate_single(pos_o, vel_o, dt);\n        simulate_double(dt, pos_i, vel_i, pos_o, vel_o);\n    }\n    \n    // reproject to polar coordinates:\n    vec2 next_i;\n    next_i.x = Cartesian2Polar(pos_i).x;\n    vec2 orth_i = Polar2Cartesian(next_i.x+0.5, 1.0);\n    next_i.y = length(vel_i)*sign(dot(vel_i,orth_i));\n    next_i.y = dot(vel_i, orth_i);\n    \n    vec2 next_o;\n    vec2 pos_o_rel = pos_o - pos_i; // we only store the relative position and motion of the outer pendulum\n    next_o.x = Cartesian2Polar(pos_o_rel).x;\n    vec2 orth_o = Polar2Cartesian(next_o.x+0.5, 1.0);\n    vec2 vel_o_rel = vel_o - vel_i;\n    next_o.y = length(vel_o_rel)*sign(dot(vel_o_rel,orth_o));\n    next_o.y = dot(vel_o_rel, orth_o);\n    \n    // fix the one element for testing\n    //next_i = vec2(0.0, 0.0);\n    //next_o = vec2(0.0, 0.0);\n    vec4 new_state = vec4(next_i, next_o);\n    return new_state;\n}\n\nvoid mainImage( out vec4 fragColor, in vec2 fragCoord )\n{\n    // Normalized pixel coordinates (from -1..1)\n    vec2 uv = fragCoord/iResolution.xy;\n    uv *= 2.0;\n    uv -= 1.0;\n    \n    ivec2 st = ivec2(fragCoord);\n    vec4 prev = texelFetch(iChannel0, st, 0);\n    if (iFrame < 2) { // maybe a fix for resizing here too?\n        prev = init(uv);        \n    }\n    //vec4 next = single(prev.x, prev.y).xyxy;\n    vec4 next = double_pendulum(prev);\n    //next.zw = vec2(0.0,0.0);\n    //next = simulate(prev.xy, prev.zw, iTimeDelta);\n    \n       \n    vec4 col = vec4(next);\n    \n    fragColor = vec4(col);\n}",
           "name": "Buffer A",
           "description": "",
           "type": "buffer"
@@ -153,7 +153,7 @@
       "info": {
         "id": "wXKSR1",
         "date": "1754246850",
-        "viewed": 22,
+        "viewed": 38,
         "name": "texture bitplanes",
         "username": "jakel101",
         "description": "https://en.wikipedia.org/wiki/Bit_plane somehow came up on Discord... here we show the reconstructed uin8 bitplanes but split into RGBA channels.\n\nbot left is Red, bot right is Green, top left is Blue and top right is Alpha!",
@@ -165,7 +165,7 @@
           "bitplane"
         ],
         "hasliked": 0,
-        "retrieved": "2025-08-04T20:19:48.729231+00:00"
+        "retrieved": "2025-08-09T21:42:21.238037+00:00"
       },
       "renderpass": [
         {
@@ -203,7 +203,7 @@
       "info": {
         "id": "t3tXz8",
         "date": "1753142287",
-        "viewed": 152,
+        "viewed": 158,
         "name": "Dirt Terrain of Pillars",
         "username": "jakel101",
         "description": "this is meant to be a submission for https://itch.io/jam/acerola-dirt-jam\nnot VOXELS, height is not quantized!\ntracked changes on [url=https://github.com/Vipitis/shader_tracker/tree/main/jakel101/t3tXz8_Dirt_Terrain_of_Pillars]GitHub[/url]",
@@ -217,7 +217,7 @@
           "dirtjam"
         ],
         "hasliked": 0,
-        "retrieved": "2025-08-04T20:19:48.729231+00:00"
+        "retrieved": "2025-08-09T21:42:21.238037+00:00"
       },
       "renderpass": [
         {
@@ -297,7 +297,7 @@
       "info": {
         "id": "tXK3Rd",
         "date": "1752868197",
-        "viewed": 122,
+        "viewed": 123,
         "name": "interactive broken LCD",
         "username": "jakel101",
         "description": "the lowest effort idea on my massive list of shader ideas. Use the mouse start and end positions to break it in another way.\nYou can also put this in the image pass for other existing shaders!",
@@ -312,7 +312,7 @@
           "discord"
         ],
         "hasliked": 0,
-        "retrieved": "2025-08-04T20:19:48.729231+00:00"
+        "retrieved": "2025-08-09T21:42:21.238037+00:00"
       },
       "renderpass": [
         {
@@ -363,7 +363,7 @@
       "info": {
         "id": "tXc3D7",
         "date": "1751330967",
-        "viewed": 703,
+        "viewed": 710,
         "name": "checkerboard with only mix()",
         "username": "jakel101",
         "description": "what if you are only allowed to use one built in function?\n\nwhich other function has potential?",
@@ -377,7 +377,7 @@
           "onefunction"
         ],
         "hasliked": 0,
-        "retrieved": "2025-08-04T20:19:48.729231+00:00"
+        "retrieved": "2025-08-09T21:42:21.238037+00:00"
       },
       "renderpass": [
         {
@@ -400,7 +400,7 @@
       "info": {
         "id": "wcySRc",
         "date": "1750458246",
-        "viewed": 97,
+        "viewed": 102,
         "name": "3D waterfall audio",
         "username": "jakel101",
         "description": "first idea implementing: https://www.shadertoy.com/view/M3VBWt\nwill behave differently on your resolution and framerate, let me know what works and what doesn't",
@@ -413,7 +413,7 @@
           "audio"
         ],
         "hasliked": 0,
-        "retrieved": "2025-07-27T23:40:44.865504+00:00"
+        "retrieved": "2025-08-09T21:42:21.238037+00:00"
       },
       "renderpass": [
         {
@@ -493,7 +493,7 @@
       "info": {
         "id": "wc33WX",
         "date": "1747616947",
-        "viewed": 209,
+        "viewed": 218,
         "name": "Random Beat every min - 87 years",
         "username": "jakel101",
         "description": "Discussed this idea on Discord the other night, decided to sit down and implement it. Needs better instruments still!\ncan get out of sync after ~1 min, so just reload/recompile and you get something new.\n\n(instrument improvements in progress)",
@@ -507,7 +507,7 @@
           "drums"
         ],
         "hasliked": 0,
-        "retrieved": "2025-07-27T23:40:44.865504+00:00"
+        "retrieved": "2025-08-09T21:42:21.238037+00:00"
       },
       "renderpass": [
         {
@@ -526,7 +526,7 @@
         {
           "inputs": [],
           "outputs": [],
-          "code": "# define LIFE 6\n// linetime of 2^n seconds per beat. Meant to be 6, but 0 or 1 can be used for testing\n\n# define BPM 85.0\n// change, recompile, play and then rewind!\n\n\n// TODO: does this hash every repeat? I am not sure\n// via https://www.shadertoy.com/view/XlGcRh\n// https://www.pcg-random.org/\nuint pcg(uint v)\n{\n\tuint state = v * 747796405u + 2891336453u;\n\tuint word = ((state >> ((state >> 28u) + 4u)) ^ state) * 277803737u;\n\treturn (word >> 22u) ^ word;\n}\n\n//TODO this is not at all accurate, but good enough for the demo\nuint unixTime(){\n    // deconstruct iDate back into a 32 bit unix timestamp:\n    // iDate.x = years\n    // iDate.y = months\n    // iDate.z = days\n    // iDate.w = seconds (including fractionals)\n    // TODO month/day is off by one?\n    uint time;\n    \n    uvec4 date = uvec4(iDate);\n    date.x -= 1970u; // offset since Unix epoch!\n    \n    // lazy addition for now to get a value.\n    // TODO: improve values.\n    time += uint(365.24 * float(date.x )) * 24u * 60u * 60u;\n    time += 30u*date.y * 24u * 60u * 60u;\n    time += date.z * 24u * 60u * 60u;\n    time += date.w;\n    \n    // On the Image pass we subtract the current runtime to get the time during compilation\n    // this is meant to match the Sound pass compilation varaint in the future.\n    //time -= uint(iTime); // can be out of sync -.-\n    return time;\n\n}\n\n// 32 bit value interpreted at trinary by reading 2 bits with max(2)\n// this should hash\nuint beat_hash(){\n    uint beat;\n    \n    // placeholder\n    beat = unixTime();\n    // to cause variations about every ~1 minute, we ignore the lowest 6 bits\n    // our target space is 3^16 which needs less than 26 bits.\n    uint seed = beat >> LIFE; // 6 bits to only change every 64 seconds, reduced for testing\n    uint max_val = 43046720u; //3^16 -1\n    seed = pcg(seed);\n    //seed = seed%max_val; // so it rolls over?\n    \n    \n    \n    // convert to (binary-encoded) trineary representation:        \n    int i;\n    uint val = seed; // this is too imprecise? we lose precision\n    for (i=0; i<16; i++){\n        uint tri = val%3u;\n        val = val/3u; // move to quotient for the next part\n        // fill two bits at a time\n        beat = beat << 2u;\n        beat += uint(tri);//uint(tri);  \n    }    \n    return beat;\n}\n",
+          "code": "# define LIFE 6\n// linetime of 2^n seconds per beat. Meant to be 6, but 0 or 1 can be used for testing\n\n# define BPM 65.0\n// change, recompile, play and then rewind!\n\n\n// TODO: does this hash every repeat? I am not sure\n// via https://www.shadertoy.com/view/XlGcRh\n// https://www.pcg-random.org/\nuint pcg(uint v)\n{\n\tuint state = v * 747796405u + 2891336453u;\n\tuint word = ((state >> ((state >> 28u) + 4u)) ^ state) * 277803737u;\n\treturn (word >> 22u) ^ word;\n}\n\n//TODO this is not at all accurate, but good enough for the demo\nuint unixTime(){\n    // deconstruct iDate back into a 32 bit unix timestamp:\n    // iDate.x = years\n    // iDate.y = months\n    // iDate.z = days\n    // iDate.w = seconds (including fractionals)\n    // TODO month/day is off by one?\n    uint time;\n    \n    uvec4 date = uvec4(iDate);\n    date.x -= 1970u; // offset since Unix epoch!\n    \n    // lazy addition for now to get a value.\n    // TODO: improve values.\n    time += uint(365.24 * float(date.x )) * 24u * 60u * 60u;\n    time += 30u*date.y * 24u * 60u * 60u;\n    time += date.z * 24u * 60u * 60u;\n    time += date.w;\n    \n    // On the Image pass we subtract the current runtime to get the time during compilation\n    // this is meant to match the Sound pass compilation varaint in the future.\n    //time -= uint(iTime); // can be out of sync -.-\n    return time;\n\n}\n\n// 32 bit value interpreted at trinary by reading 2 bits with max(2)\n// this should hash\nuint beat_hash(){\n    uint beat;\n    \n    // placeholder\n    beat = unixTime();\n    // to cause variations about every ~1 minute, we ignore the lowest 6 bits\n    // our target space is 3^16 which needs less than 26 bits.\n    uint seed = beat >> LIFE; // 6 bits to only change every 64 seconds, reduced for testing\n    uint max_val = 43046720u; //3^16 -1\n    seed = pcg(seed);\n    //seed = seed%max_val; // so it rolls over?\n    \n    \n    \n    // convert to (binary-encoded) trineary representation:        \n    int i;\n    uint val = seed; // this is too imprecise? we lose precision\n    for (i=0; i<16; i++){\n        uint tri = val%3u;\n        val = val/3u; // move to quotient for the next part\n        // fill two bits at a time\n        beat = beat << 2u;\n        beat += uint(tri);//uint(tri);  \n    }    \n    return beat;\n}\n",
           "name": "Common",
           "description": "",
           "type": "common"
@@ -546,7 +546,7 @@
       "info": {
         "id": "3f33zl",
         "date": "1747344200",
-        "viewed": 80,
+        "viewed": 82,
         "name": "casting tests",
         "username": "jakel101",
         "description": "testing how color values get cast into 8unorm",
@@ -558,7 +558,7 @@
           "test"
         ],
         "hasliked": 0,
-        "retrieved": "2025-07-27T23:40:44.865504+00:00"
+        "retrieved": "2025-08-09T21:42:21.238037+00:00"
       },
       "renderpass": [
         {
@@ -581,7 +581,7 @@
       "info": {
         "id": "w32XD1",
         "date": "1746067136",
-        "viewed": 73,
+        "viewed": 75,
         "name": "displacing tiling in 2D??",
         "username": "jakel101",
         "description": "WIP where you distort the tile UV (and later ID) so they are no longer squares",
@@ -593,7 +593,7 @@
           "tiling"
         ],
         "hasliked": 0,
-        "retrieved": "2025-07-27T23:40:44.865504+00:00"
+        "retrieved": "2025-08-09T21:42:21.238037+00:00"
       },
       "renderpass": [
         {
@@ -616,7 +616,7 @@
       "info": {
         "id": "tXlGR7",
         "date": "1742863063",
-        "viewed": 102,
+        "viewed": 106,
         "name": "buffer self reference test",
         "username": "jakel101",
         "description": "little illustration on how multiple buffer pass interact with one another and their render order. used for unit testing",
@@ -629,7 +629,7 @@
           "multipass"
         ],
         "hasliked": 0,
-        "retrieved": "2025-07-27T23:40:44.865504+00:00"
+        "retrieved": "2025-08-09T21:42:21.238037+00:00"
       },
       "renderpass": [
         {
@@ -765,7 +765,7 @@
       "info": {
         "id": "M3VBWt",
         "date": "1738883384",
-        "viewed": 213,
+        "viewed": 217,
         "name": "pathtraced heightmap (WIP)",
         "username": "jakel101",
         "description": "goal is to display some texture as a 3D heighmap. like an array of columns maybe?",
@@ -779,7 +779,7 @@
           "pathracing"
         ],
         "hasliked": 0,
-        "retrieved": "2025-07-27T23:40:44.865504+00:00"
+        "retrieved": "2025-08-09T21:42:21.238037+00:00"
       },
       "renderpass": [
         {
@@ -805,7 +805,7 @@
               "channel": 0
             }
           ],
-          "code": "// Apache 2.0 no patents \\_%_/\n\n/* Image pass shader to draw a texture/buffer/input as a heightmap\n* with some pathtracing as pillars of pixels.\n* Meant to be used in multiple projects and therefore\n* easily configurable at the top with a few macros\n* \n* selflink: https://www.shadertoy.com/view/M3VBWt\n* \n* work in progress:\n* todo(ideas):\n* - monte carlo light simulation\n* - refactor with structs\n* - pysics simulation\n* - point/ball/area lights\n* - infinite/LOD tiles?\n* - DDA like traversal\n* - fix artefacts\n* - cleanup as usual\n* feedback/improvements welcome here or on the original.\n*/\n\n\n# define PI 3.141592653\n# define HEIGHT_SCALE 0.4\n\n# define CELLS ivec2(iChannelResolution[0].x, iChannelResolution[0].y)\n\n// unsure yet where to bring this!\n# define SUN normalize(vec3(sin(iDate.w*0.5), cos(iTime), HEIGHT_SCALE*1.5))\n// normalize(vec3(3.0, -5.0, 2.0))\n\n// horizontal FOV, if you use negative values the camera will be orthographic!\n// examples:\n// FOV -1.0 for orthographic (sensor size)\n// FOV 90.0 for perspective wide\n// FOV 45.0 for perspective narower\n# define FOV 90.0\n\n\n// next project: actual structs for easier pathracing:\nstruct Material{\n    vec3 col; // ground color (or texture?)\n    float emissivity; //emitted light in some unit?\n    float roughness; // or just fresnel? what kinda model are we doing?\n    float translucency; // something like 1.0 for glass and 0.0 for solids? -> rays split/sample/refract??\n};\n\nstruct Hit{\n    vec3 normal;\n    vec3 pos;\n    Material mat;\n    // no object ID or something I think...\n};\n\nstruct Ray{\n    vec3 origin;\n    vec3 direction;\n    float dist;\n};\n\n\n// exaples?\nMaterial white_chalk = Material(vec3(1.0), 0.0, 0.99, 0.0);\nMaterial ground = Material(vec3(0.5), 0.0, 0.85, 0.0);\nMaterial sky = Material(vec3(0.02, 0.03, 0.95), 0.5, 0.5, 0.5);\nMaterial glass = Material(vec3(0.95), 0.0, 0.05, 0.95);\n\n\nivec2 worldToCell(vec3 p) {\n    \n    // move world space again\n    p += 1.0;\n    p *= 0.5;\n    ivec2 st = ivec2((p.xy*vec2(CELLS.xy)));\n    // TODO: find an actual solution to the edge cases!\n    st = min(st, CELLS -1);\n    return st;\n}\n\nvec4 AABB(vec3 center, vec3 extend, vec3 ro, vec3 rd){        \n    // miss is found by checking rear_hit > front_hit\n    // .zw contains information about the entry/exit 1: +x, -1: -x, 2: +y, -2: -y, 3: +z, -3: -z??\n    // you can do norm[abs(int(box_hit.z))-1] = sign(box_hit.z);\n    \n    // extend goes both ways! (size)\n    vec3 front = center + sign(-rd)*extend; \n    vec3 rear = center + sign(rd)*extend; \n    \n    //now distance those 6 planes:\n    vec3 front_dist = (front-ro)/rd;\n    vec3 rear_dist = (rear-ro)/rd;\n    \n    // TODO: turn into massive if/else if/else blocks for the direction info? (is there argmax?)\n    float front_hit;//= max(max(front_dist.x, front_dist.y), front_dist.z); // front\n    float front_dir;\n    if (front_dist.x > front_dist.y && front_dist.x > front_dist.z){\n        front_hit = front_dist.x;\n        front_dir = 1.0 * sign(rd.x);\n    }\n    else if (front_dist.y > front_dist.x && front_dist.y > front_dist.z) {\n        front_hit = front_dist.y;\n        front_dir = 2.0 * sign(rd.y);\n    }\n    else {\n        front_hit = front_dist.z;\n        front_dir = 3.0 * sign(rd.z);\n    }\n    // in case of ro being inside the box, the front_dir normal still needs to point away from center.\n    front_dir *= sign(front_hit); \n    \n    float rear_hit;// = min(min(rear_dist.x, rear_dist.y), rear_dist.z);\n    float rear_dir;\n    if (rear_dist.x < rear_dist.y && rear_dist.x < rear_dist.z){\n        rear_hit = rear_dist.x;\n        rear_dir = 1.0 * sign(rd.x);\n    }\n    else if (rear_dist.y < rear_dist.x && rear_dist.y < rear_dist.z) {\n        rear_hit = rear_dist.y;\n        rear_dir = 2.0 * sign(rd.y);\n    }\n    else {\n        rear_hit = rear_dist.z;\n        rear_dir = 3.0 * sign(rd.z);\n    }\n    \n    vec4 res = vec4(front_hit, rear_hit, front_dir, rear_dir);    \n    return res;\n}\n\nvec4 pillar_hits(ivec2 cell, float height, vec3 ro, vec3 rd){    \n    // let's move the pillar into world space by having it's center + extends    \n    vec3 extend = vec3(1.0/vec2(CELLS), height*0.5);\n    vec3 p = vec3(cell.xy, height*0.5);    \n    p.xy *= extend.xy; \n    p.xy *= 2.0;\n    p.xy -= 1.0 - extend.xy; // not quite the offset?\n    //extend.z = extend.y; // make them cubes?\n    // TODO: redo this math when less asleep...\n    vec4 res = AABB(p, extend, ro, rd);\n    return res;\n}\n\n\nvec4 sampleHeight(ivec2 cell){\n    // to allow for more complex math to determine height\n    // .rgb should just return the texture color or some modification of it\n    //cell.x = (cell.x + iFrame) % int(iChannelResolution[0].x); // fun texture scroll\n    vec4 tex = texelFetch(iChannel0, cell, 0);\n    vec4 res;\n    res.a = (tex.r + tex.g + tex.b)/3.0;\n    res.rgb = tex.rgb; // * res.a; // to make it more of a \"height\" map?\n    //res.rgb = vec3(0.5);\n    //res.a = tex.a; // use existing height data?\n    res.a *= HEIGHT_SCALE;    \n    return res;\n}\n\nvec4 raycast(vec3 ro, vec3 rd){\n    // cast the ray untill there is a hit or we exit the box\n    // \"any hit\" shader?\n    // returns tex + dist, negative dist means a \"miss\"\n    vec4 box_hit = AABB(vec3(0.0, 0.0, HEIGHT_SCALE*0.5), vec3(1.0, 1.0, HEIGHT_SCALE*0.5), ro, rd);\n    \n    // miss or \"inside\" -.- TODO: got to figure out a better  check with normals maybe!\n    vec3 entry_norm = vec3(0.0);\n    entry_norm[abs(int(box_hit.z))-1] = sign(box_hit.z);\n    if ((box_hit.x > box_hit.y)){// && dot(rd, entry_norm) >= 0.0){\n        // if we \"MISS\" the whole box (not inside).\n        //return vec4(entry_norm+vec3(0.5)*1.1, -1.0);\n        return vec4(vec3(0.2), -abs(box_hit.y));\n    }\n    else if (box_hit.x < 0.0){\n        ro += rd* 0.0002; // so we avoid being \"inside\" a pillar early?\n        // we are inside because the entry is behind the ro!\n        //return vec4(vec3(rd), -1.0);\n        //return vec4(vec3(ro), -1.0);\n        //return vec4(entry_norm+vec3(0.5), 1.0);\n        //return vec4(vec3(0.2, 0.0, 0.8), -abs(box_hit.y));\n    }\n    \n    //return vec4(vec3(0.6), 1.0);\n    \n    vec3 entry;\n    entry = ro + rd*(box_hit.x); // should be start \"inside\" the box\n    ivec2 current_cell = worldToCell(entry); // TODO: this one is problematic!\n    int i;\n    int max_depth = (CELLS.x + CELLS.y)+2; // could also be min!\n    for (i = 0; i < max_depth; i++){        \n        if (current_cell.x < 0 || current_cell.x >= CELLS.x ||\n            current_cell.y < 0 || current_cell.y >= CELLS.y) {\n            // we marched far enough are are \"outside the box\" now!\n            return vec4(vec3(0.4), -abs(box_hit.y));\n        }        \n        vec4 tex = sampleHeight(current_cell);\n        vec4 hit = pillar_hits(current_cell, tex.a, ro, rd);\n        \n        vec3 entry_norm = vec3(0.0);\n        entry_norm[abs(int(hit.z))-1] = sign(hit.z);\n        \n        \n        vec3 exit = ro + (rd * hit.y);\n        vec3 exit_norm = vec3(0.0);\n        exit_norm[abs(int(hit.w))-1] = sign(hit.w);                \n        \n        if (hit.x < 0.0 && hit.y < 0.0) {\n            // the current cell is \"behind\" us, we basically miss\n            \n            //return vec4(vec2(current_cell).xyx/10.0, -abs(hit.x));\n            //return vec4(vec3(hit.y)+0.5, -1.0);\n            //return vec4(exit, -1.0);\n            //return vec4(entry, -1.0);\n            //return vec4(vec3(0.6), -1.0);\n            //return vec4(hit);\n            //return vec4(exit_norm+vec3(0.5), 1.0);            \n            //continue; // jumps ahead in the loop!\n        }\n        else if ((hit.x <= hit.y) && (dot(rd, entry_norm) >= 0.0)){\n            // \"any hit\" (side/top)\n            //return vec4(vec2(current_cell).xyx/10.0, abs(hit.x));\n            //return vec4(vec3(hit.x), abs(hit.x));\n            \n            // do a little bit of light sim by doing diffuse \"block of chalk\"\n            vec3 col = tex.rgb;\n            \n            // half the phong diffuse\n            // TODO: assume some base \"emissive\" quality to all pillars (or scaled with some value?)\n            // needs better hit model and shader to accumulate over a few traces.\n            col *= (2.0*dot(entry_norm, -SUN)) + 0.2; // \"ambient\"/emission term\n            \n            return vec4(col, abs(hit.x));\n        }        \n        \n        if (abs(exit_norm.z) > 0.0){\n            //basically this is a \"top\" exit, we aren't stepping further anymore. (on the shadow dir)\n            // TODO: think about what this means!\n            //return vec4(0.98, 0.821, 0.75, -abs(box_hit.y));\n        }\n        \n        // the step\n        ivec2 next_cell = current_cell + ivec2(exit_norm.xy);\n        if (next_cell == current_cell){\n            // in this case we do another raycast - but without any Z component\n            // so the vector is sideways and points to a new cell!\n            hit = pillar_hits(current_cell, 1.0, ro, normalize(vec3(rd.xy, 0.0)));\n            exit_norm = vec3(0.0); // has to be reset\n            exit_norm[abs(int(hit.w))-1] = sign(hit.w);\n            \n            next_cell += ivec2(exit_norm.xy);\n        }\n        // for next iteration\n        current_cell = next_cell;\n    }\n    //return vec4(vec2(current_cell)/vec2(CELLS), 0.0, 0.0);\n    // defualt \"miss\"? -> like we exit the box?\n    return vec4(vec3(1.0), -abs(box_hit.y));\n\n}\n\nfloat shadow(vec3 ro, vec3 rd){\n    // return the amount of shadowed?\n    // we are now marching upwards from some hit\n    // ro is essentially the point we started from\n    // rd is the sun angle\n    vec4 res = raycast(ro, normalize(rd));\n    //return res.a;\n    if (res.a < 0.0){// || (ro + rd*res.a).z >= HEIGHT_SCALE){\n        // likely means outside the box/ground!\n        return 1.0;\n    }    \n    else {\n        return 0.5;\n    }\n}\n\nfloat checkerboard(vec2 check_uv, float cells){\n    check_uv *= cells/2.0;\n    float rows = float(mod(check_uv.y, 1.0) <= 0.5);\n    float cols = float(mod(check_uv.x, 1.0) <= 0.5);\n    return float(rows == cols);\n}\n\n\nvec4 sampleGround(vec3 ro, vec3 rd){\n    // for any ray that misses the heightmap\n    float ground_height = 0.0;\n    float ground_dist = (ground_height-ro.z)/rd.z;\n    if (ground_dist < 0.0) {\n        // essentially sky hit instead?\n        // just some random skybox right now... could be improved of course!\n        return vec4(0.98, 0.79, 0.12, ground_dist)*exp(dot(SUN, rd));\n    }\n    \n    vec3 ground_hit = ro + (rd * ground_dist);\n        \n    float val = checkerboard(ground_hit.xy, 8.0)* 0.1;\n    val += 0.45;\n    //val *= 2.0 - length(abs(ground_hit));\n    \n    // fake sun angle spotlight... TODO actual angle and normal calculation!\n    val *= 2.5 - min(2.3, length((-SUN-ground_hit)));//,vec3(0.0,0.0,1.0));\n    \n    vec3 col = vec3(val);\n    return vec4(col, ground_dist);\n}\n\n\nfloat dda(vec3 rd, vec3 p){\n    // goal here is to return the distance to the next grid wall..\n    // we just do this in 2d and ignore the 3rd dimension\n    // depends on the CELLS gloabl/macro\n    float t;\n    \n    ivec2 cell = worldToCell(p);\n    \n    vec2 grid_uv = p.xy;\n    grid_uv += 1.0;\n    grid_uv *= 0.5;\n    grid_uv *= vec2(CELLS);\n    grid_uv = fract(grid_uv);\n    \n    vec2 wall_dist_deltas = abs(1./rd.yx); // because rd is normalized\n    \n    // which is closer?\n    \n    \n    \n    return t;\n}\n\nvoid mainImage( out vec4 fragColor, in vec2 fragCoord )\n{\n    // uv normalized to [-1..1] for height with more width\n    vec2 uv = (2.0*fragCoord - iResolution.xy)/iResolution.y;\n    vec2 mo = (2.0*iMouse.xy - iResolution.xy)/iResolution.y;\n    \n    //fragColor = texture(iChannel0, uv);\n    //return;\n    \n    // for when it's just idling...   \n    float azimuth = iTime*0.15 + mo.x; // keeps a bit of residue of the mouse!\n    float altitude = 0.7+cos(iTime*0.4)*0.15;      \n    if (sign(iMouse.z) > 0.0){\n        // orbiting camera setup\n        azimuth = PI*mo.x;\n        altitude = 0.5*PI*clamp(mo.y+1.0, -0.01, 0.99); // maybe just positive?\n    }\n    \n    // make sure you don't look \"below\"\n    altitude = clamp(altitude, HEIGHT_SCALE*0.5, PI);\n    \n    // a unit length orbit!\n    vec3 camera_pos = vec3(\n        cos(azimuth)*cos(altitude),\n        sin(azimuth)*cos(altitude),\n        sin(altitude));    \n    // the camera is always looking \"at\" the origin or half way above it\n    vec3 look_dir = normalize(vec3(0.0, 0.0, HEIGHT_SCALE*0.5) - camera_pos);\n    \n    \n    // TODO moving the camera in and out over time??\n    camera_pos += look_dir * -1.0; // moving the camera \"back\" to avoid occlusions?\n    // two vectors orthogonal to this camera direction (tagents?)    \n    //vec3 look_u = camera_pos + vec3(-sin(azimuth), cos(azimuth), 0.0);\n    //vec3 look_v = camera_pos + vec3(sin(altitude)*-cos(azimuth), sin(altitude)*-sin(azimuth), cos(altitude));    \n    \n    // turns out analytically these aren't correct. so using cross instead -.-\n    vec3 look_u = normalize(cross(vec3(0.0, 0.0, -1.0), look_dir));\n    vec3 look_v = normalize(cross(camera_pos, look_u)); // is this faster?\n    // camera plane(origin of each pixel) -> barycentric?\n    \n    vec3 camera_plane;\n    vec3 ray_dir;\n    vec3 ray_origin;\n                        \n    if (FOV > 0.0){\n        // assume a pinhole camera.\n        // FOV is the horizontal fov, the given focal length becomes:\n        // the 1.0 is the sensor height.\n        float focal_length = 1.0/tan(radians(FOV*0.5));\n        \n        // the ro\n        camera_plane = camera_pos - (look_dir*focal_length) + ((look_u*uv.x) + (look_v*uv.y))*-1.0; // inverted here to see upright\n        ray_origin = camera_pos;\n        \n        // the rd\n        ray_dir = camera_pos-camera_plane;\n        ray_dir = normalize(ray_dir);        \n    }\n    \n    else {\n        // negative FOV values are interpreted as a sensor size for a orthographic camera!\n        // horizontal sensor size, -1 would be something sensible... everything else is far away\n        float sensor_size = FOV*0.5*-1.0;\n        camera_plane = camera_pos + ((look_u*uv.x)+(look_v*uv.y))*sensor_size; // wider fov = larger \"sensor\"\n        ray_dir = look_dir;\n        ray_origin = camera_plane;\n    }\n    \n    // actual stuff happening:\n    vec4 res = raycast(ray_origin, ray_dir);\n    if (res.a < 0.0) {\n        res = sampleGround(ray_origin, ray_dir);\n    }\n    vec3 hit = ray_origin + (ray_dir*res.a);\n    vec4 ref = raycast(hit, SUN).rgba; //reflection (the full shadow)    \n    ref.rgb *= 1.0 - step(0.0, ref.a); // this makes misses black?\n    \n    float shadow_amt = shadow(hit, SUN);\n    \n    vec3 col = res.rgb * shadow_amt;\n    \n    // TODO: better \"shadow\" value via actually colored shadow??\n    // vec3 col2 = res.rgb + ref.rgb*0.3;    \n    // col = vec3(uv.x > 0.0 ? col.rgb : col2.rgb);\n    \n    fragColor = vec4(vec3(col),1.0);\n}",
+          "code": "// Apache 2.0 no patents \\_%_/\n\n/* Image pass shader to draw a texture/buffer/input as a heightmap\n* with some pathtracing as pillars of pixels.\n* Meant to be used in multiple projects and therefore\n* easily configurable at the top with a few macros\n*\n* selflink: https://www.shadertoy.com/view/M3VBWt\n*\n* work in progress:\n* todo(ideas):\n* - monte carlo light simulation\n* - pysics simulation\n* - point/ball/area lights\n* - infinite/LOD tiles?\n* - DDA like traversal\n* - cleanup as usual\n* feedback/improvements welcome here.\n*/\n\n\n# define PI 3.141592653\n# define HEIGHT_SCALE 0.5\n\n# define CELLS ivec2(iChannelResolution[0].x, iChannelResolution[0].y)\n\n// unsure yet where to bring this!\n# define SUN normalize(vec3(sin(iDate.w*0.5), cos(iTime), HEIGHT_SCALE*1.5))\n// normalize(vec3(3.0, -5.0, 2.0))\n\n// horizontal FOV, if you use negative values the camera will be orthographic!\n// examples:\n// FOV -1.0 for orthographic (sensor size)\n// FOV 90.0 for perspective wide\n// FOV 45.0 for perspective narower\n# define FOV 90.0\n\n\n// next project: actual structs for easier pathracing:\nstruct Material{\n    vec3 col; // ground color (or texture?)\n    float emissivity; //emitted light in some unit?\n    float roughness; // or just fresnel? what kinda model are we doing?\n    float translucency; // something like 1.0 for glass and 0.0 for solids? -> rays split/sample/refract??\n};\n\n// exaples?\nMaterial white_chalk = Material(vec3(1.0), 0.0, 0.99, 0.0);\nMaterial ground = Material(vec3(0.5), 0.0, 0.85, 0.0);\nMaterial sky = Material(vec3(0.02, 0.03, 0.95), 0.5, 0.5, 0.5);\nMaterial glass = Material(vec3(0.95), 0.0, 0.05, 0.95);\n\n\nivec2 worldToCell(vec3 p) {\n    // move world space again\n    p += 1.0;\n    p *= 0.5;\n    ivec2 st = ivec2((p.xy*vec2(CELLS.xy)));\n    // TODO: find an actual solution to the edge cases!\n    st = min(st, CELLS -1);\n    return st;\n}\n\nstruct Ray{\n    vec3 origin;\n    vec3 dir;\n    vec3 inv_dir; // for speedup?\n};\n\nstruct HitInfo{\n    bool hit;\n    // rest illdefined for a miss\n    bool inside;\n    vec3 entry;\n    vec3 exit;\n    vec3 entry_norm;\n    vec3 exit_norm;\n    float entry_dist;\n    float exit_dist;\n};\n\n// sorta reference: https://tavianator.com/2022/ray_box_boundary.html\nHitInfo AABB(vec3 center, vec3 size, Ray ray){\n    HitInfo res;\n\n    vec3 pos = center + size;\n    vec3 neg = center - size;\n\n    vec3 pos_dist = (pos-ray.origin) * ray.inv_dir;\n    vec3 neg_dist = (neg-ray.origin) * ray.inv_dir;\n\n    vec3 min_dist = min(pos_dist, neg_dist);\n    vec3 max_dist = max(pos_dist, neg_dist);\n\n    res.entry_dist = max(max(min_dist.x, min_dist.y), min_dist.z);\n    res.exit_dist = min(min(max_dist.x, max_dist.y), max_dist.z);\n\n    // normals point away from the center\n    res.entry_norm = -sign(ray.dir) * vec3(greaterThanEqual(min_dist, vec3(res.entry_dist)));\n    res.exit_norm = sign(ray.dir) * vec3(lessThanEqual(max_dist, vec3(res.exit_dist)));\n\n    // essentially methods?\n    res.entry = ray.origin + ray.dir*res.entry_dist;\n    res.exit = ray.origin + ray.dir*res.exit_dist;\n\n    res.hit = res.entry_dist < res.exit_dist && res.exit_dist > 0.0;\n    res.inside = res.entry_dist < 0.0; // entry behind us\n\n    return res;\n}\n\n\nHitInfo pillar_hits(ivec2 cell, float height, Ray ray){\n    // let's move the pillar into world space by having it's center + extends\n\n    vec3 extend = vec3(1.0/vec2(CELLS), abs(height)*0.5);\n    vec3 p = vec3(cell.xy, abs(height)*0.5);\n    p.xy *= extend.xy;\n    p.xy *= 2.0;\n    p.xy -= 1.0 - extend.xy; // not quite the offset?\n    //extend.z = extend.y; // make them cubes?\n\n    // for the case of clouds the box is at the top?\n    if (height < 0.0){\n        p.z = HEIGHT_SCALE*(1.0-abs(height*0.5));\n    }\n\n    // TODO: redo this math when less asleep...\n    HitInfo res = AABB(p, extend, ray);\n    return res;\n}\n\n\nvec4 sampleHeight(ivec2 cell){\n    // to allow for more complex math to determine height\n    // .rgb should just return the texture color or some modification of it\n    //cell.x = (cell.x + iFrame) % int(iChannelResolution[0].x); // fun texture scroll\n    vec4 tex = texelFetch(iChannel0, cell, 0);\n    vec4 res;\n    res.a = tex.r; // our height data is in this channel\n    res.rgb = tex.rgb; // simply copy the color as the \"texture\" for now\n    \n    // res.a = tex.a; // debug/use existing height data.\n    res.a *= HEIGHT_SCALE;\n    return res;\n}\n\n\nvec4 raycast(Ray ray){\n    // cast the ray untill there is a hit or we exit the box\n    // \"any hit\" shader?\n    // returns tex + dist, negative dist means a \"miss\"\n    // the inout for clouds sums up it's distance and depth of clouds.\n    HitInfo box = AABB(vec3(0.0, 0.0, HEIGHT_SCALE*0.5), vec3(1.0, 1.0, HEIGHT_SCALE*0.5), ray);\n\n    vec3 entry = box.entry;\n\n    if (!box.hit){\n        // if we \"MISS\" the whole box (not inside?).\n\n        return vec4(vec3(0.2, 0.8, 0.0), -abs(box.exit_dist));\n    }\n    // everything below here is inside the box\n    if (box.inside){\n        // if we are \"inside\" the entry should just be ro!\n        entry = ray.origin; // maybe problems with distance caluclations at the end?\n    }\n\n    //return vec4(vec3(0.6), 1.0);\n\n    //return entry.rgbb;\n\n    ivec2 current_cell = worldToCell(entry); // TODO: this one is problematic!\n    int i;\n    ivec2 max_cells = CELLS - min(current_cell, CELLS-current_cell);\n    int max_depth = (max_cells.x + max_cells.y)+2; // could also be min!\n    for (i = 0; i < max_depth; i++){\n        if (current_cell.x < 0 || current_cell.x >= CELLS.x ||\n            current_cell.y < 0 || current_cell.y >= CELLS.y){\n            // we marched far enough are are \"outside the box\" now!\n            return vec4(vec3(0.4), -abs(box.exit_dist));\n        }\n\n        vec4 tex = sampleHeight(current_cell);\n        HitInfo pillar = pillar_hits(current_cell, tex.a, ray);\n\n        if (pillar.hit) {\n            // \"any hit\" (side/top/bot) -> loop ends here\n            // do a little bit of light sim by doing diffuse \"block of chalk\"\n            vec3 col = tex.rgb;\n            // half the phong diffuse\n            // TODO: assume some base \"emissive\" quality to all pillars (or scaled with some value?)\n            // needs better hit model and shader to accumulate over a few traces.\n            // TODO: should one of them be negative?\n            col *= max(0.0, dot(pillar.entry_norm, SUN)); // where does the 2.0 factor came from?\n            return vec4(col, abs(pillar.entry_dist));\n        }\n\n        // check if our exit distance larger than the box, means we should be at the final pillar...\n        if (pillar.exit_dist >= box.exit_dist){\n            return vec4(vec3(0.8), -abs(pillar.exit_dist));\n        }\n\n        // the step\n        ivec2 next_cell = current_cell + ivec2(pillar.exit_norm.xy);\n        if (next_cell == current_cell){\n            // in this case we do another raycast - but without any Z component\n            // so the vector is sideways and points to a new cell!\n            vec3 flat_rd = vec3(ray.dir.xy, 0.0);\n            Ray flat_ray = Ray(ray.origin, flat_rd, 1.0/flat_rd);\n\n            HitInfo grid = pillar_hits(current_cell, 1.0, flat_ray);\n            next_cell += ivec2(grid.exit_norm.xy); // TODO check if this norm is correct!\n        }\n        // for next iteration\n        current_cell = next_cell;\n    }\n    //return vec4(vec2(current_cell)/vec2(CELLS), 0.0, 0.0);\n    // defualt \"miss\"? -> like we exit the box?\n\n    return vec4(vec3(1,0,0), -abs(box.exit_dist));\n\n}\n\n// more like a bad shadowmap\n// idea for the future: precompute the horizon per pixel: https://youtu.be/LluCbGdi-RM\nfloat shadow(Ray sun_ray){\n    // return the amount of shadowed?\n    // we are now marching upwards from some hit\n    // ro is essentially the point we started from\n    // rd is the sun angle\n    vec4 res = raycast(sun_ray);\n    //return res.a;\n    if (res.a < 0.0){// || (ro + rd*res.a).z >= HEIGHT_SCALE){\n        return 1.0; // miss means full sunlight!\n    }\n    else {\n        // TODO: use distance?\n        return 0.1; // additional ambient light from here?\n    }\n}\n\n// copied from https://www.shadertoy.com/view/M3jGzh\nfloat checkerboard(vec2 check_uv, float cells){\n    check_uv *= cells/2.0;\n    float rows = float(mod(check_uv.y, 1.0) <= 0.5);\n    float cols = float(mod(check_uv.x, 1.0) <= 0.5);\n    return float(rows == cols);\n}\n\nvec4 sampleGround(vec3 ro, vec3 rd){\n    // for any ray that misses the heightmap\n    // TODO: rename to sample skybox maybe? as the ground is sorta part of that...\n    float ground_height = 0.0;\n    float ground_dist = (ground_height-ro.z)/rd.z;\n    if (ground_dist < 0.0) {\n        // essentially sky hit instead?\n        // just some random skybox right now... could be improved of course!\n        vec3 col = vec3(0.23, 0.59, 0.92)*exp(dot(SUN, rd)-0.8);\n        col = clamp(col, vec3(0.0), vec3(1.0));\n        return vec4(col, 30.0); // some random distance that is positive!\n    }\n\n    vec3 ground_hit = ro + (rd * ground_dist);\n\n    float val = checkerboard(ground_hit.xy, 8.0)* 0.1;\n    val += 0.45;\n    //val *= 2.0 - length(abs(ground_hit));\n\n    // fake sun angle spotlight... TODO actual angle and normal calculation!\n    val *= 2.5 - min(2.3, length((-SUN-ground_hit)));//,vec3(0.0,0.0,1.0));\n\n    vec3 col = vec3(val);\n    return vec4(col, ground_dist);\n}\n\nvoid mainImage( out vec4 fragColor, in vec2 fragCoord )\n{\n    // uv normalized to [-1..1] for height with more width\n    vec2 uv = (2.0*fragCoord - iResolution.xy)/iResolution.y;\n    vec2 mo = (2.0*iMouse.xy - iResolution.xy)/iResolution.y;\n\n    //fragColor = texture(iChannel0, uv);\n    //return;\n\n    // for when it's just idling...\n    float azimuth = -1.9+iTime*0.1 + mo.x; // keeps a bit of residue of the mouse!\n    float altitude = 0.7+cos(1.5+iTime*0.25)*0.35;\n    if (sign(iMouse.z) > 0.0){\n        // orbiting camera setup\n        azimuth = PI*mo.x;\n        altitude = 0.5*PI*clamp(mo.y+1.0, -0.01, 0.99); // maybe just positive?\n    }\n\n    // make sure you don't look \"below\"\n    altitude = clamp(altitude, HEIGHT_SCALE*0.2, PI);\n\n    // a unit length orbit!\n    vec3 camera_pos = vec3(\n        cos(azimuth)*cos(altitude),\n        sin(azimuth)*cos(altitude),\n        sin(altitude));\n    // the camera is always looking \"at\" the origin or half way above it\n    vec3 look_dir = normalize(vec3(0.0, 0.0, HEIGHT_SCALE*0.5) - camera_pos);\n\n\n    // TODO moving the camera in and out over time??\n    camera_pos += look_dir * -0.75; // moving the camera \"back\" to avoid occlusions?\n    // two vectors orthogonal to this camera direction (tagents?)\n    //vec3 look_u = camera_pos + vec3(-sin(azimuth), cos(azimuth), 0.0);\n    //vec3 look_v = camera_pos + vec3(sin(altitude)*-cos(azimuth), sin(altitude)*-sin(azimuth), cos(altitude));\n\n\n    // turns out analytically these aren't correct. so using cross instead -.-\n    vec3 look_u = normalize(cross(vec3(0.0, 0.0, -1.0), look_dir));\n    vec3 look_v = normalize(cross(camera_pos, look_u)); // is this faster?\n    // camera plane(origin of each pixel) -> barycentric?\n\n    vec3 camera_plane;\n    vec3 ray_dir;\n    vec3 ray_origin;\n\n    if (FOV > 0.0){\n        // assume a pinhole camera.\n        // FOV is the horizontal fov, the given focal length becomes:\n        // the 1.0 is the sensor height.\n        float focal_length = 1.0/tan(radians(FOV*0.5));\n\n        // the ro\n        camera_plane = camera_pos - (look_dir*focal_length) + ((look_u*uv.x) + (look_v*uv.y))*-1.0; // inverted here to see upright\n        ray_origin = camera_pos;\n\n        // the rd\n        ray_dir = camera_pos-camera_plane;\n        ray_dir = normalize(ray_dir);\n    }\n\n    else {\n        // negative FOV values are interpreted as a sensor size for a orthographic camera!\n        // horizontal sensor size, -1 would be something sensible... everything else is far away\n        float sensor_size = FOV*0.5*-1.0;\n        camera_plane = camera_pos + ((look_u*uv.x)+(look_v*uv.y))*sensor_size; // wider fov = larger \"sensor\"\n        ray_dir = look_dir;\n        ray_origin = camera_plane;\n    }\n\n    Ray camera = Ray(ray_origin, ray_dir, 1.0/ray_dir);\n\n    // actual stuff happening:\n    vec4 res = raycast(camera);\n    // fragColor = vec4(vec3(res.rgb),1.0);\n    //return; // early debug exit\n    if (res.a < 0.0) {\n        // we missed the initial terrain\n        res = sampleGround(ray_origin, ray_dir);\n\n        // TODO: the skybox hit returns a negative distance, so we need to handle that\n        //res.a = abs(res.a);\n    }\n    vec3 hit = ray_origin + (ray_dir*res.a);\n\n    // ro is a bit offset to reduce start intersections that are noisey ... want a better solution one day.\n    Ray sun_check = Ray(hit+0.001*SUN, SUN, 1.0/SUN);\n\n    vec4 ref = raycast(sun_check).rgba; //reflection (the full shadow)\n    ref.rgb *= 1.0 - step(0.0, ref.a); // this makes misses black?\n    // ref.rgb *= 1.0-exp(-shadow_cloud*15.0); // more \"realistic\" cloud shadow?\n\n    float shadow_amt = shadow(sun_check);\n    // actually more light amount -.-\n    // so we add and \"ambient\" base like here\n    vec3 col = res.rgb * max(0.3, shadow_amt);\n\n\n    // distance fog? I don't like it so it's commented out\n    // float dist_fog = transmittance(res.a *0.015);\n    // vec3 fog_col = vec3(0.4, 0.5, 0.9);\n    // col = mix(col, fog_col, 1.0-dist_fog);\n\n    // TODO: better \"shadow\" value via actually colored shadow??\n    // vec3 col2 = res.rgb + ref.rgb*0.3;\n    // col = vec3(uv.x > 0.0 ? col.rgb : col2.rgb);\n\n    fragColor = vec4(vec3(col),1.0);\n}",
           "name": "Image",
           "description": "",
           "type": "image"
@@ -817,7 +817,7 @@
       "info": {
         "id": "X3KyRd",
         "date": "1737245413",
-        "viewed": 85,
+        "viewed": 86,
         "name": "bounding box development",
         "username": "jakel101",
         "description": "trying to figure out how this would work (without looking it up)\n\nneeded for this unreleased one: https://www.shadertoy.com/view/lXycDz",
@@ -830,7 +830,7 @@
           "cube"
         ],
         "hasliked": 0,
-        "retrieved": "2025-07-27T23:40:44.865504+00:00"
+        "retrieved": "2025-08-09T21:42:21.238037+00:00"
       },
       "renderpass": [
         {
@@ -853,7 +853,7 @@
       "info": {
         "id": "lXyyzR",
         "date": "1735848777",
-        "viewed": 135,
+        "viewed": 138,
         "name": "Persistent Music Visualizer",
         "username": "jakel101",
         "description": "to have some of the element be reactive over time, the persistence is done over time in a Buffer.\nChange the Music in Buffer A Channel1\nChange channel0 to be sampled nearest instead of linear\ndeveloped on 165 Hz, might look worse on 60!",
@@ -867,7 +867,7 @@
           "infinity"
         ],
         "hasliked": 0,
-        "retrieved": "2025-07-27T23:40:44.865504+00:00"
+        "retrieved": "2025-08-09T21:42:21.238037+00:00"
       },
       "renderpass": [
         {
@@ -947,7 +947,7 @@
       "info": {
         "id": "4XcyR2",
         "date": "1735523996",
-        "viewed": 169,
+        "viewed": 174,
         "name": "particles by density? (wip)",
         "username": "jakel101",
         "description": "I had some ideas for 3D voxels, so I am trying a 2D thing first... not sure where this will go-\n\nidea is end up with something emergent that approximates gravity",
@@ -961,7 +961,7 @@
           "cellular"
         ],
         "hasliked": 0,
-        "retrieved": "2025-07-27T23:40:44.865504+00:00"
+        "retrieved": "2025-08-09T21:42:21.238037+00:00"
       },
       "renderpass": [
         {
@@ -1041,7 +1041,7 @@
       "info": {
         "id": "4XdcRr",
         "date": "1734655998",
-        "viewed": 113,
+        "viewed": 116,
         "name": "undefined bitshift visulizer",
         "username": "jakel101",
         "description": "the spec says that bitshifts greater than 31 bits are undefined. and the signed bit gets pushed away to.\nSo what do you see here?",
@@ -1054,7 +1054,7 @@
           "debug"
         ],
         "hasliked": 0,
-        "retrieved": "2025-07-27T23:40:44.865504+00:00"
+        "retrieved": "2025-08-09T21:42:21.238037+00:00"
       },
       "renderpass": [
         {
@@ -1077,7 +1077,7 @@
       "info": {
         "id": "XXdyRn",
         "date": "1734642443",
-        "viewed": 86,
+        "viewed": 89,
         "name": "operator precedence: << and + ",
         "username": "jakel101",
         "description": "so what do you see? and what is correct according to the spec? https://registry.khronos.org/OpenGL/specs/es/3.0/GLSL_ES_Specification_3.00.pdf 5.1 Operator precedence has addition above bitwise shift\ncorrect should be bot left like top left/right?",
@@ -1090,7 +1090,7 @@
           "bug"
         ],
         "hasliked": 0,
-        "retrieved": "2025-07-27T23:40:44.865504+00:00"
+        "retrieved": "2025-08-09T21:42:21.238037+00:00"
       },
       "renderpass": [
         {
@@ -1113,7 +1113,7 @@
       "info": {
         "id": "4cyBzy",
         "date": "1734198534",
-        "viewed": 112,
+        "viewed": 114,
         "name": "Ray(line) distance functions",
         "username": "jakel101",
         "description": "mostly figuring this out myself, but pen and paper and some references help.\n\nDirected ray has an origin and direction. I use a single float as the direction in radians (but a point or vector would also work), 0 is top.",
@@ -1127,7 +1127,7 @@
           "distance"
         ],
         "hasliked": 0,
-        "retrieved": "2025-07-27T23:40:44.865504+00:00"
+        "retrieved": "2025-08-09T21:42:21.238037+00:00"
       },
       "renderpass": [
         {
@@ -1150,7 +1150,7 @@
       "info": {
         "id": "XctfWS",
         "date": "1733434292",
-        "viewed": 110,
+        "viewed": 113,
         "name": "Angle in revolutions",
         "username": "jakel101",
         "description": "took me a while to figure out that atan exist with two parameters too. the rescaling with mod is a bit odd, taken from here: https://www.shadertoy.com/view/4s3BR8",
@@ -1162,7 +1162,7 @@
           "trigonometry"
         ],
         "hasliked": 0,
-        "retrieved": "2025-07-27T23:40:44.865504+00:00"
+        "retrieved": "2025-08-09T21:42:21.238037+00:00"
       },
       "renderpass": [
         {
@@ -1185,7 +1185,7 @@
       "info": {
         "id": "M3fyR8",
         "date": "1733178754",
-        "viewed": 119,
+        "viewed": 124,
         "name": "Party Lights for Live Coding!",
         "username": "jakel101",
         "description": "hommage to TM Rave!\ncontributions, golfing welcome, use as you please!",
@@ -1200,7 +1200,7 @@
           "golf"
         ],
         "hasliked": 0,
-        "retrieved": "2025-07-27T23:40:44.865504+00:00"
+        "retrieved": "2025-08-09T21:42:21.238037+00:00"
       },
       "renderpass": [
         {

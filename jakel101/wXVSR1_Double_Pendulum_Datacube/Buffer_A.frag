@@ -21,11 +21,12 @@ vec4 init(vec2 uv) {
     //vals.xz = vec2(1.0); // start at the top
     
     // vals.x = 0.0; //for testing the outer part is just hanging
-    vals.yw = uv.yx*5.1; // add a lot of momentum!
+    vals.yw = uv.yx*6.1; // add a lot of momentum!
+    
     
     //vals.wy = uv*0.01; // really close initial conditions (start athe the top)
     
-    
+    vals.y *= -1.0; // little flip so the default mouse position looks more interesting!
     return vals;
 }
 
@@ -176,7 +177,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     
     ivec2 st = ivec2(fragCoord);
     vec4 prev = texelFetch(iChannel0, st, 0);
-    if (iFrame < 2) {
+    if (iFrame < 2) { // maybe a fix for resizing here too?
         prev = init(uv);        
     }
     //vec4 next = single(prev.x, prev.y).xyxy;
