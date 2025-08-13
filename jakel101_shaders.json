@@ -1,6 +1,6 @@
 {
   "userName": "jakel101",
-  "date": "2025-08-09T22:07:12.532217+00:00",
+  "date": "2025-08-13T20:37:17.529453+00:00",
   "numShaders": 57,
   "shaders": [
     {
@@ -8,11 +8,11 @@
       "info": {
         "id": "wXVSR1",
         "date": "1754338508",
-        "viewed": 47,
+        "viewed": 60,
         "name": "Double Pendulum Datacube",
         "username": "jakel101",
         "description": "this idea came when I watched https://youtu.be/9gQQAO4I1Ck\nthe screenspace essentially picks different initial conditions, keeping track of position and momentum for the inner and outer pendulum. use mouse to inspect a specific pendulum!\n",
-        "likes": 3,
+        "likes": 4,
         "published": 3,
         "flags": 32,
         "usePreview": 0,
@@ -23,7 +23,7 @@
           "datacube"
         ],
         "hasliked": 0,
-        "retrieved": "2025-08-09T22:07:12.532217+00:00"
+        "retrieved": "2025-08-13T20:37:17.529453+00:00"
       },
       "renderpass": [
         {
@@ -153,7 +153,7 @@
       "info": {
         "id": "wXKSR1",
         "date": "1754246850",
-        "viewed": 39,
+        "viewed": 50,
         "name": "texture bitplanes",
         "username": "jakel101",
         "description": "https://en.wikipedia.org/wiki/Bit_plane somehow came up on Discord... here we show the reconstructed uin8 bitplanes but split into RGBA channels.\n\nbot left is Red, bot right is Green, top left is Blue and top right is Alpha!",
@@ -165,7 +165,7 @@
           "bitplane"
         ],
         "hasliked": 0,
-        "retrieved": "2025-08-09T22:07:12.532217+00:00"
+        "retrieved": "2025-08-13T20:37:17.529453+00:00"
       },
       "renderpass": [
         {
@@ -203,7 +203,7 @@
       "info": {
         "id": "t3tXz8",
         "date": "1753142287",
-        "viewed": 159,
+        "viewed": 169,
         "name": "Dirt Terrain of Pillars",
         "username": "jakel101",
         "description": "this is meant to be a submission for https://itch.io/jam/acerola-dirt-jam\nnot VOXELS, height is not quantized!\ntracked changes on [url=https://github.com/Vipitis/shader_tracker/tree/main/jakel101/t3tXz8_Dirt_Terrain_of_Pillars]GitHub[/url]",
@@ -217,7 +217,7 @@
           "dirtjam"
         ],
         "hasliked": 0,
-        "retrieved": "2025-08-09T22:07:12.532217+00:00"
+        "retrieved": "2025-08-13T20:37:17.529453+00:00"
       },
       "renderpass": [
         {
@@ -297,7 +297,7 @@
       "info": {
         "id": "tXK3Rd",
         "date": "1752868197",
-        "viewed": 124,
+        "viewed": 127,
         "name": "interactive broken LCD",
         "username": "jakel101",
         "description": "the lowest effort idea on my massive list of shader ideas. Use the mouse start and end positions to break it in another way.\nYou can also put this in the image pass for other existing shaders!",
@@ -312,7 +312,7 @@
           "discord"
         ],
         "hasliked": 0,
-        "retrieved": "2025-08-09T22:07:12.532217+00:00"
+        "retrieved": "2025-08-13T20:37:17.529453+00:00"
       },
       "renderpass": [
         {
@@ -363,7 +363,7 @@
       "info": {
         "id": "tXc3D7",
         "date": "1751330967",
-        "viewed": 711,
+        "viewed": 717,
         "name": "checkerboard with only mix()",
         "username": "jakel101",
         "description": "what if you are only allowed to use one built in function?\n\nwhich other function has potential?",
@@ -377,7 +377,7 @@
           "onefunction"
         ],
         "hasliked": 0,
-        "retrieved": "2025-08-09T22:07:12.532217+00:00"
+        "retrieved": "2025-08-13T20:37:17.529453+00:00"
       },
       "renderpass": [
         {
@@ -400,7 +400,7 @@
       "info": {
         "id": "wcySRc",
         "date": "1750458246",
-        "viewed": 102,
+        "viewed": 104,
         "name": "3D waterfall audio",
         "username": "jakel101",
         "description": "first idea implementing: https://www.shadertoy.com/view/M3VBWt\nwill behave differently on your resolution and framerate, let me know what works and what doesn't",
@@ -413,7 +413,7 @@
           "audio"
         ],
         "hasliked": 0,
-        "retrieved": "2025-08-09T22:07:12.532217+00:00"
+        "retrieved": "2025-08-13T20:37:17.529453+00:00"
       },
       "renderpass": [
         {
@@ -493,7 +493,7 @@
       "info": {
         "id": "wc33WX",
         "date": "1747616947",
-        "viewed": 219,
+        "viewed": 222,
         "name": "Random Beat every min - 87 years",
         "username": "jakel101",
         "description": "Discussed this idea on Discord the other night, decided to sit down and implement it. Needs better instruments still!\ncan get out of sync after ~1 min, so just reload/recompile and you get something new.\n\n(instrument improvements in progress)",
@@ -507,7 +507,7 @@
           "drums"
         ],
         "hasliked": 0,
-        "retrieved": "2025-08-09T22:07:12.532217+00:00"
+        "retrieved": "2025-08-13T20:37:17.529453+00:00"
       },
       "renderpass": [
         {
@@ -546,7 +546,7 @@
       "info": {
         "id": "3f33zl",
         "date": "1747344200",
-        "viewed": 83,
+        "viewed": 84,
         "name": "casting tests",
         "username": "jakel101",
         "description": "testing how color values get cast into 8unorm",
@@ -558,7 +558,7 @@
           "test"
         ],
         "hasliked": 0,
-        "retrieved": "2025-08-09T22:07:12.532217+00:00"
+        "retrieved": "2025-08-13T20:37:17.529453+00:00"
       },
       "renderpass": [
         {
@@ -581,7 +581,7 @@
       "info": {
         "id": "w32XD1",
         "date": "1746067136",
-        "viewed": 76,
+        "viewed": 77,
         "name": "displacing tiling in 2D??",
         "username": "jakel101",
         "description": "WIP where you distort the tile UV (and later ID) so they are no longer squares",
@@ -593,7 +593,7 @@
           "tiling"
         ],
         "hasliked": 0,
-        "retrieved": "2025-08-09T22:07:12.532217+00:00"
+        "retrieved": "2025-08-13T20:37:17.529453+00:00"
       },
       "renderpass": [
         {
@@ -616,7 +616,7 @@
       "info": {
         "id": "tXlGR7",
         "date": "1742863063",
-        "viewed": 107,
+        "viewed": 111,
         "name": "buffer self reference test",
         "username": "jakel101",
         "description": "little illustration on how multiple buffer pass interact with one another and their render order. used for unit testing",
@@ -629,7 +629,7 @@
           "multipass"
         ],
         "hasliked": 0,
-        "retrieved": "2025-08-09T22:07:12.532217+00:00"
+        "retrieved": "2025-08-13T20:37:17.529453+00:00"
       },
       "renderpass": [
         {
@@ -765,7 +765,7 @@
       "info": {
         "id": "M3VBWt",
         "date": "1738883384",
-        "viewed": 217,
+        "viewed": 221,
         "name": "pathtraced heightmap (WIP)",
         "username": "jakel101",
         "description": "goal is to display some texture as a 3D heighmap. like an array of columns maybe?",
@@ -779,7 +779,7 @@
           "pathracing"
         ],
         "hasliked": 0,
-        "retrieved": "2025-08-09T22:07:12.532217+00:00"
+        "retrieved": "2025-08-13T20:37:17.529453+00:00"
       },
       "renderpass": [
         {
@@ -805,7 +805,7 @@
               "channel": 0
             }
           ],
-          "code": "// Apache 2.0 no patents \\_%_/\n\n/* Image pass shader to draw a texture/buffer/input as a heightmap\n* with some pathtracing as pillars of pixels.\n* Meant to be used in multiple projects and therefore\n* easily configurable at the top with a few macros\n*\n* selflink: https://www.shadertoy.com/view/M3VBWt\n*\n* work in progress:\n* todo(ideas):\n* - monte carlo light simulation\n* - pysics simulation\n* - point/ball/area lights\n* - infinite/LOD tiles?\n* - DDA like traversal\n* - cleanup as usual\n* feedback/improvements welcome here.\n*/\n\n\n# define PI 3.141592653\n# define HEIGHT_SCALE 0.5\n\n# define CELLS ivec2(iChannelResolution[0].x, iChannelResolution[0].y)\n\n// unsure yet where to bring this!\n# define SUN normalize(vec3(sin(iDate.w*0.5), cos(iTime), HEIGHT_SCALE*1.5))\n// normalize(vec3(3.0, -5.0, 2.0))\n\n// horizontal FOV, if you use negative values the camera will be orthographic!\n// examples:\n// FOV -1.0 for orthographic (sensor size)\n// FOV 90.0 for perspective wide\n// FOV 45.0 for perspective narower\n# define FOV 90.0\n\n\n// next project: actual structs for easier pathracing:\nstruct Material{\n    vec3 col; // ground color (or texture?)\n    float emissivity; //emitted light in some unit?\n    float roughness; // or just fresnel? what kinda model are we doing?\n    float translucency; // something like 1.0 for glass and 0.0 for solids? -> rays split/sample/refract??\n};\n\n// exaples?\nMaterial white_chalk = Material(vec3(1.0), 0.0, 0.99, 0.0);\nMaterial ground = Material(vec3(0.5), 0.0, 0.85, 0.0);\nMaterial sky = Material(vec3(0.02, 0.03, 0.95), 0.5, 0.5, 0.5);\nMaterial glass = Material(vec3(0.95), 0.0, 0.05, 0.95);\n\n\nivec2 worldToCell(vec3 p) {\n    // move world space again\n    p += 1.0;\n    p *= 0.5;\n    ivec2 st = ivec2((p.xy*vec2(CELLS.xy)));\n    // TODO: find an actual solution to the edge cases!\n    st = min(st, CELLS -1);\n    return st;\n}\n\nstruct Ray{\n    vec3 origin;\n    vec3 dir;\n    vec3 inv_dir; // for speedup?\n};\n\nstruct HitInfo{\n    bool hit;\n    // rest illdefined for a miss\n    bool inside;\n    vec3 entry;\n    vec3 exit;\n    vec3 entry_norm;\n    vec3 exit_norm;\n    float entry_dist;\n    float exit_dist;\n};\n\n// sorta reference: https://tavianator.com/2022/ray_box_boundary.html\nHitInfo AABB(vec3 center, vec3 size, Ray ray){\n    HitInfo res;\n\n    vec3 pos = center + size;\n    vec3 neg = center - size;\n\n    vec3 pos_dist = (pos-ray.origin) * ray.inv_dir;\n    vec3 neg_dist = (neg-ray.origin) * ray.inv_dir;\n\n    vec3 min_dist = min(pos_dist, neg_dist);\n    vec3 max_dist = max(pos_dist, neg_dist);\n\n    res.entry_dist = max(max(min_dist.x, min_dist.y), min_dist.z);\n    res.exit_dist = min(min(max_dist.x, max_dist.y), max_dist.z);\n\n    // normals point away from the center\n    res.entry_norm = -sign(ray.dir) * vec3(greaterThanEqual(min_dist, vec3(res.entry_dist)));\n    res.exit_norm = sign(ray.dir) * vec3(lessThanEqual(max_dist, vec3(res.exit_dist)));\n\n    // essentially methods?\n    res.entry = ray.origin + ray.dir*res.entry_dist;\n    res.exit = ray.origin + ray.dir*res.exit_dist;\n\n    res.hit = res.entry_dist < res.exit_dist && res.exit_dist > 0.0;\n    res.inside = res.entry_dist < 0.0; // entry behind us\n\n    return res;\n}\n\n\nHitInfo pillar_hits(ivec2 cell, float height, Ray ray){\n    // let's move the pillar into world space by having it's center + extends\n\n    vec3 extend = vec3(1.0/vec2(CELLS), abs(height)*0.5);\n    vec3 p = vec3(cell.xy, abs(height)*0.5);\n    p.xy *= extend.xy;\n    p.xy *= 2.0;\n    p.xy -= 1.0 - extend.xy; // not quite the offset?\n    //extend.z = extend.y; // make them cubes?\n\n    // for the case of clouds the box is at the top?\n    if (height < 0.0){\n        p.z = HEIGHT_SCALE*(1.0-abs(height*0.5));\n    }\n\n    // TODO: redo this math when less asleep...\n    HitInfo res = AABB(p, extend, ray);\n    return res;\n}\n\n\nvec4 sampleHeight(ivec2 cell){\n    // to allow for more complex math to determine height\n    // .rgb should just return the texture color or some modification of it\n    //cell.x = (cell.x + iFrame) % int(iChannelResolution[0].x); // fun texture scroll\n    vec4 tex = texelFetch(iChannel0, cell, 0);\n    vec4 res;\n    res.a = tex.r; // our height data is in this channel\n    res.rgb = tex.rgb; // simply copy the color as the \"texture\" for now\n    \n    // res.a = tex.a; // debug/use existing height data.\n    res.a *= HEIGHT_SCALE;\n    return res;\n}\n\n\nvec4 raycast(Ray ray){\n    // cast the ray untill there is a hit or we exit the box\n    // \"any hit\" shader?\n    // returns tex + dist, negative dist means a \"miss\"\n    // the inout for clouds sums up it's distance and depth of clouds.\n    HitInfo box = AABB(vec3(0.0, 0.0, HEIGHT_SCALE*0.5), vec3(1.0, 1.0, HEIGHT_SCALE*0.5), ray);\n\n    vec3 entry = box.entry;\n\n    if (!box.hit){\n        // if we \"MISS\" the whole box (not inside?).\n\n        return vec4(vec3(0.2, 0.8, 0.0), -abs(box.exit_dist));\n    }\n    // everything below here is inside the box\n    if (box.inside){\n        // if we are \"inside\" the entry should just be ro!\n        entry = ray.origin; // maybe problems with distance caluclations at the end?\n    }\n\n    //return vec4(vec3(0.6), 1.0);\n\n    //return entry.rgbb;\n\n    ivec2 current_cell = worldToCell(entry); // TODO: this one is problematic!\n    int i;\n    ivec2 max_cells = CELLS - min(current_cell, CELLS-current_cell);\n    int max_depth = (max_cells.x + max_cells.y)+2; // could also be min!\n    for (i = 0; i < max_depth; i++){\n        if (current_cell.x < 0 || current_cell.x >= CELLS.x ||\n            current_cell.y < 0 || current_cell.y >= CELLS.y){\n            // we marched far enough are are \"outside the box\" now!\n            return vec4(vec3(0.4), -abs(box.exit_dist));\n        }\n\n        vec4 tex = sampleHeight(current_cell);\n        HitInfo pillar = pillar_hits(current_cell, tex.a, ray);\n\n        if (pillar.hit) {\n            // \"any hit\" (side/top/bot) -> loop ends here\n            // do a little bit of light sim by doing diffuse \"block of chalk\"\n            vec3 col = tex.rgb;\n            // half the phong diffuse\n            // TODO: assume some base \"emissive\" quality to all pillars (or scaled with some value?)\n            // needs better hit model and shader to accumulate over a few traces.\n            // TODO: should one of them be negative?\n            col *= max(0.0, dot(pillar.entry_norm, SUN)); // where does the 2.0 factor came from?\n            return vec4(col, abs(pillar.entry_dist));\n        }\n\n        // check if our exit distance larger than the box, means we should be at the final pillar...\n        if (pillar.exit_dist >= box.exit_dist){\n            return vec4(vec3(0.8), -abs(pillar.exit_dist));\n        }\n\n        // the step\n        ivec2 next_cell = current_cell + ivec2(pillar.exit_norm.xy);\n        if (next_cell == current_cell){\n            // in this case we do another raycast - but without any Z component\n            // so the vector is sideways and points to a new cell!\n            vec3 flat_rd = vec3(ray.dir.xy, 0.0);\n            Ray flat_ray = Ray(ray.origin, flat_rd, 1.0/flat_rd);\n\n            HitInfo grid = pillar_hits(current_cell, 1.0, flat_ray);\n            next_cell += ivec2(grid.exit_norm.xy); // TODO check if this norm is correct!\n        }\n        // for next iteration\n        current_cell = next_cell;\n    }\n    //return vec4(vec2(current_cell)/vec2(CELLS), 0.0, 0.0);\n    // defualt \"miss\"? -> like we exit the box?\n\n    return vec4(vec3(1,0,0), -abs(box.exit_dist));\n\n}\n\n// more like a bad shadowmap\n// idea for the future: precompute the horizon per pixel: https://youtu.be/LluCbGdi-RM\nfloat shadow(Ray sun_ray){\n    // return the amount of shadowed?\n    // we are now marching upwards from some hit\n    // ro is essentially the point we started from\n    // rd is the sun angle\n    vec4 res = raycast(sun_ray);\n    //return res.a;\n    if (res.a < 0.0){// || (ro + rd*res.a).z >= HEIGHT_SCALE){\n        return 1.0; // miss means full sunlight!\n    }\n    else {\n        // TODO: use distance?\n        return 0.1; // additional ambient light from here?\n    }\n}\n\n// copied from https://www.shadertoy.com/view/M3jGzh\nfloat checkerboard(vec2 check_uv, float cells){\n    check_uv *= cells/2.0;\n    float rows = float(mod(check_uv.y, 1.0) <= 0.5);\n    float cols = float(mod(check_uv.x, 1.0) <= 0.5);\n    return float(rows == cols);\n}\n\nvec4 sampleGround(vec3 ro, vec3 rd){\n    // for any ray that misses the heightmap\n    // TODO: rename to sample skybox maybe? as the ground is sorta part of that...\n    float ground_height = 0.0;\n    float ground_dist = (ground_height-ro.z)/rd.z;\n    if (ground_dist < 0.0) {\n        // essentially sky hit instead?\n        // just some random skybox right now... could be improved of course!\n        vec3 col = vec3(0.23, 0.59, 0.92)*exp(dot(SUN, rd)-0.8);\n        col = clamp(col, vec3(0.0), vec3(1.0));\n        return vec4(col, 30.0); // some random distance that is positive!\n    }\n\n    vec3 ground_hit = ro + (rd * ground_dist);\n\n    float val = checkerboard(ground_hit.xy, 8.0)* 0.1;\n    val += 0.45;\n    //val *= 2.0 - length(abs(ground_hit));\n\n    // fake sun angle spotlight... TODO actual angle and normal calculation!\n    val *= 2.5 - min(2.3, length((-SUN-ground_hit)));//,vec3(0.0,0.0,1.0));\n\n    vec3 col = vec3(val);\n    return vec4(col, ground_dist);\n}\n\nvoid mainImage( out vec4 fragColor, in vec2 fragCoord )\n{\n    // uv normalized to [-1..1] for height with more width\n    vec2 uv = (2.0*fragCoord - iResolution.xy)/iResolution.y;\n    vec2 mo = (2.0*iMouse.xy - iResolution.xy)/iResolution.y;\n\n    //fragColor = texture(iChannel0, uv);\n    //return;\n\n    // for when it's just idling...\n    float azimuth = -1.9+iTime*0.1 + mo.x; // keeps a bit of residue of the mouse!\n    float altitude = 0.7+cos(1.5+iTime*0.25)*0.35;\n    if (sign(iMouse.z) > 0.0){\n        // orbiting camera setup\n        azimuth = PI*mo.x;\n        altitude = 0.5*PI*clamp(mo.y+1.0, -0.01, 0.99); // maybe just positive?\n    }\n\n    // make sure you don't look \"below\"\n    altitude = clamp(altitude, HEIGHT_SCALE*0.2, PI);\n\n    // a unit length orbit!\n    vec3 camera_pos = vec3(\n        cos(azimuth)*cos(altitude),\n        sin(azimuth)*cos(altitude),\n        sin(altitude));\n    // the camera is always looking \"at\" the origin or half way above it\n    vec3 look_dir = normalize(vec3(0.0, 0.0, HEIGHT_SCALE*0.5) - camera_pos);\n\n\n    // TODO moving the camera in and out over time??\n    camera_pos += look_dir * -0.75; // moving the camera \"back\" to avoid occlusions?\n    // two vectors orthogonal to this camera direction (tagents?)\n    //vec3 look_u = camera_pos + vec3(-sin(azimuth), cos(azimuth), 0.0);\n    //vec3 look_v = camera_pos + vec3(sin(altitude)*-cos(azimuth), sin(altitude)*-sin(azimuth), cos(altitude));\n\n\n    // turns out analytically these aren't correct. so using cross instead -.-\n    vec3 look_u = normalize(cross(vec3(0.0, 0.0, -1.0), look_dir));\n    vec3 look_v = normalize(cross(camera_pos, look_u)); // is this faster?\n    // camera plane(origin of each pixel) -> barycentric?\n\n    vec3 camera_plane;\n    vec3 ray_dir;\n    vec3 ray_origin;\n\n    if (FOV > 0.0){\n        // assume a pinhole camera.\n        // FOV is the horizontal fov, the given focal length becomes:\n        // the 1.0 is the sensor height.\n        float focal_length = 1.0/tan(radians(FOV*0.5));\n\n        // the ro\n        camera_plane = camera_pos - (look_dir*focal_length) + ((look_u*uv.x) + (look_v*uv.y))*-1.0; // inverted here to see upright\n        ray_origin = camera_pos;\n\n        // the rd\n        ray_dir = camera_pos-camera_plane;\n        ray_dir = normalize(ray_dir);\n    }\n\n    else {\n        // negative FOV values are interpreted as a sensor size for a orthographic camera!\n        // horizontal sensor size, -1 would be something sensible... everything else is far away\n        float sensor_size = FOV*0.5*-1.0;\n        camera_plane = camera_pos + ((look_u*uv.x)+(look_v*uv.y))*sensor_size; // wider fov = larger \"sensor\"\n        ray_dir = look_dir;\n        ray_origin = camera_plane;\n    }\n\n    Ray camera = Ray(ray_origin, ray_dir, 1.0/ray_dir);\n\n    // actual stuff happening:\n    vec4 res = raycast(camera);\n    // fragColor = vec4(vec3(res.rgb),1.0);\n    //return; // early debug exit\n    if (res.a < 0.0) {\n        // we missed the initial terrain\n        res = sampleGround(ray_origin, ray_dir);\n\n        // TODO: the skybox hit returns a negative distance, so we need to handle that\n        //res.a = abs(res.a);\n    }\n    vec3 hit = ray_origin + (ray_dir*res.a);\n\n    // ro is a bit offset to reduce start intersections that are noisey ... want a better solution one day.\n    Ray sun_check = Ray(hit+0.001*SUN, SUN, 1.0/SUN);\n\n    vec4 ref = raycast(sun_check).rgba; //reflection (the full shadow)\n    ref.rgb *= 1.0 - step(0.0, ref.a); // this makes misses black?\n    // ref.rgb *= 1.0-exp(-shadow_cloud*15.0); // more \"realistic\" cloud shadow?\n\n    float shadow_amt = shadow(sun_check);\n    // actually more light amount -.-\n    // so we add and \"ambient\" base like here\n    vec3 col = res.rgb * max(0.3, shadow_amt);\n\n\n    // distance fog? I don't like it so it's commented out\n    // float dist_fog = transmittance(res.a *0.015);\n    // vec3 fog_col = vec3(0.4, 0.5, 0.9);\n    // col = mix(col, fog_col, 1.0-dist_fog);\n\n    // TODO: better \"shadow\" value via actually colored shadow??\n    // vec3 col2 = res.rgb + ref.rgb*0.3;\n    // col = vec3(uv.x > 0.0 ? col.rgb : col2.rgb);\n\n    fragColor = vec4(vec3(col),1.0);\n}",
+          "code": "// Apache 2.0 no patents \\_%_/\n\n/* Image pass shader to draw a texture/buffer/input as a heightmap\n* with some pathtracing as pillars of pixels.\n* Meant to be used in multiple projects and therefore\n* easily configurable at the top with a few macros\n*\n* selflink: https://www.shadertoy.com/view/M3VBWt\n*\n* work in progress:\n* todo(ideas):\n* - monte carlo light simulation\n* - pysics simulation\n* - point/ball/area lights\n* - infinite/LOD tiles?\n* - DDA like traversal\n* - cleanup as usual\n* feedback/improvements welcome here.\n*/\n\n\n# define PI 3.141592653\n# define HEIGHT_SCALE 0.5\n\n# define CELLS ivec2(iChannelResolution[0].x, iChannelResolution[0].y)\n\n// unsure yet where to bring this!\n# define SUN normalize(vec3(sin(iDate.w*0.5), cos(iTime), HEIGHT_SCALE*1.5))\n// normalize(vec3(3.0, -5.0, 2.0))\n\n// horizontal FOV, if you use negative values the camera will be orthographic!\n// examples:\n// FOV -1.0 for orthographic (sensor size)\n// FOV 90.0 for perspective wide\n// FOV 45.0 for perspective narower\n# define FOV 90.0\n\n\n// next project: actual structs for easier pathracing:\nstruct Material{\n    vec3 col; // ground color (or texture?)\n    float emissivity; //emitted light in some unit?\n    float roughness; // or just fresnel? what kinda model are we doing?\n    float translucency; // something like 1.0 for glass and 0.0 for solids? -> rays split/sample/refract??\n};\n\n// exaples?\nMaterial white_chalk = Material(vec3(1.0), 0.0, 0.99, 0.0);\nMaterial ground = Material(vec3(0.5), 0.0, 0.85, 0.0);\nMaterial sky = Material(vec3(0.02, 0.03, 0.95), 0.5, 0.5, 0.5);\nMaterial glass = Material(vec3(0.95), 0.0, 0.05, 0.95);\n\n\nivec2 worldToCell(vec3 p) {\n    // move world space again\n    p += 1.0;\n    p *= 0.5;\n    ivec2 st = ivec2((p.xy*vec2(CELLS.xy)));\n    // TODO: find an actual solution to the edge cases!\n    st = min(st, CELLS -1);\n    return st;\n}\n\nstruct Ray{\n    vec3 origin;\n    vec3 dir;\n    vec3 inv_dir; // for speedup?\n};\n\nstruct HitInfo{\n    bool hit;\n    // rest illdefined for a miss\n    bool inside;\n    vec3 entry;\n    vec3 exit;\n    vec3 entry_norm;\n    vec3 exit_norm;\n    float entry_dist;\n    float exit_dist;\n};\n\n// sorta reference: https://tavianator.com/2022/ray_box_boundary.html\nHitInfo AABB(vec3 center, vec3 size, Ray ray){\n    HitInfo res;\n\n    vec3 pos = center + size;\n    vec3 neg = center - size;\n\n    vec3 pos_dist = (pos-ray.origin) * ray.inv_dir;\n    vec3 neg_dist = (neg-ray.origin) * ray.inv_dir;\n\n    vec3 min_dist = min(pos_dist, neg_dist);\n    vec3 max_dist = max(pos_dist, neg_dist);\n\n    res.entry_dist = max(max(min_dist.x, min_dist.y), min_dist.z);\n    res.exit_dist = min(min(max_dist.x, max_dist.y), max_dist.z);\n\n    // normals point away from the center\n    res.entry_norm = -sign(ray.dir) * vec3(greaterThanEqual(min_dist, vec3(res.entry_dist)));\n    res.exit_norm = sign(ray.dir) * vec3(lessThanEqual(max_dist, vec3(res.exit_dist)));\n\n    // essentially methods?\n    res.entry = ray.origin + ray.dir*res.entry_dist;\n    res.exit = ray.origin + ray.dir*res.exit_dist;\n\n    res.hit = res.entry_dist < res.exit_dist && res.exit_dist > 0.0;\n    res.inside = res.entry_dist < 0.0; // entry behind us\n\n    return res;\n}\n\n\nHitInfo pillar_hits(ivec2 cell, float height, Ray ray){\n    // let's move the pillar into world space by having it's center + extends\n\n    vec3 extend = vec3(1.0/vec2(CELLS), abs(height)*0.5);\n    vec3 p = vec3(cell.xy, abs(height)*0.5);\n    p.xy *= extend.xy;\n    p.xy *= 2.0;\n    p.xy -= 1.0 - extend.xy; // not quite the offset?\n    //extend.z = extend.y; // make them cubes?\n\n    // for the case of clouds the box is at the top?\n    if (height < 0.0){\n        p.z = HEIGHT_SCALE*(1.0-abs(height*0.5));\n    }\n\n    // TODO: redo this math when less asleep...\n    HitInfo res = AABB(p, extend, ray);\n    return res;\n}\n\n\nvec4 sampleHeight(ivec2 cell){\n    // to allow for more complex math to determine height\n    // .rgb should just return the texture color or some modification of it\n    //cell.x = (cell.x + iFrame) % int(iChannelResolution[0].x); // fun texture scroll\n    vec4 tex = texelFetch(iChannel0, cell, 0);\n    vec4 res;\n    res.a = tex.r; // our height data is in this channel\n    res.rgb = tex.rgb; // simply copy the color as the \"texture\" for now\n    \n    // res.a = tex.a; // debug/use existing height data.\n    res.a *= HEIGHT_SCALE;\n    return res;\n}\n\nstruct RaycastInfo{\n    bool hit; // if negative, the rest is undefined.\n    float dist; // hit_info.entry_dist redundant?\n    ivec2 cell; //current_cell?\n    HitInfo hit_info; //has the entry norm etc.\n    vec3 col; // TODO: replace with material\n    //Ray ray; //just as a reference?\n};\n\n\nRaycastInfo raycast(Ray ray){\n    // cast the ray untill there is a hit or we exit the box\n    // \"any hit\" shader?\n    // returns tex + dist, negative dist means a \"miss\"\n    // the inout for clouds sums up it's distance and depth of clouds.\n    RaycastInfo result;\n    \n    HitInfo box = AABB(vec3(0.0, 0.0, HEIGHT_SCALE*0.5), vec3(1.0, 1.0, HEIGHT_SCALE*0.5), ray);\n\n    vec3 entry = box.entry;\n\n    if (!box.hit){\n        // if we \"MISS\" the whole box (not inside?).\n        result.hit = false;\n        return result;\n        //return vec4(vec3(0.2, 0.8, 0.0), -abs(box.exit_dist));\n    }\n    // everything below here is inside the box\n    if (box.inside){\n        // if we are \"inside\" the entry should just be ro!\n        entry = ray.origin; // maybe problems with distance caluclations at the end?\n    }\n\n    //return vec4(vec3(0.6), 1.0);\n\n    //return entry.rgbb;\n\n    ivec2 current_cell = worldToCell(entry); // TODO: this one is problematic!\n    int i;\n    ivec2 max_cells = CELLS - min(current_cell, CELLS-current_cell);\n    int max_depth = (max_cells.x + max_cells.y)+2; // could also be min!\n    for (i = 0; i < max_depth; i++){\n        if (current_cell.x < 0 || current_cell.x >= CELLS.x ||\n            current_cell.y < 0 || current_cell.y >= CELLS.y){\n            // we marched far enough are are \"outside the box\" now!\n            result.hit = false;\n            return result;\n            // return vec4(vec3(0.4), -abs(box.exit_dist));\n        }\n\n        vec4 tex = sampleHeight(current_cell);\n        HitInfo pillar = pillar_hits(current_cell, tex.a, ray);\n\n        if (pillar.hit) {\n            // \"any hit\" (side/top/bot) -> loop ends here\n            // do a little bit of light sim by doing diffuse \"block of chalk\"\n            vec3 col = tex.rgb;\n            // half the phong diffuse\n            // TODO: assume some base \"emissive\" quality to all pillars (or scaled with some value?)\n            // needs better hit model and shader to accumulate over a few traces.\n            // TODO: should one of them be negative?\n            //col *= max(0.0, dot(pillar.entry_norm, SUN)); // where does the 2.0 factor came from?\n            result.hit = true;\n            result.hit_info = pillar;\n            result.dist = pillar.entry_dist;\n            result.col = col;\n            return result;\n            //return vec4(col, abs(pillar.entry_dist));\n        }\n\n        // check if our exit distance larger than the box, means we should be at the final pillar...\n        if (pillar.exit_dist >= box.exit_dist){\n            result.hit = false;\n            return result;\n            //return vec4(vec3(0.8), -abs(pillar.exit_dist));\n        }\n\n        // the step\n        ivec2 next_cell = current_cell + ivec2(pillar.exit_norm.xy);\n        if (next_cell == current_cell){\n            // in this case we do another raycast - but without any Z component\n            // so the vector is sideways and points to a new cell!\n            vec3 flat_rd = vec3(ray.dir.xy, 0.0);\n            Ray flat_ray = Ray(ray.origin, flat_rd, 1.0/flat_rd);\n\n            HitInfo grid = pillar_hits(current_cell, 1.0, flat_ray);\n            next_cell += ivec2(grid.exit_norm.xy); // TODO check if this norm is correct!\n        }\n        // for next iteration\n        current_cell = next_cell;\n    }\n    //return vec4(vec2(current_cell)/vec2(CELLS), 0.0, 0.0);\n    // defualt \"miss\"? -> like we exit the box?\n\n    result.hit = false;\n    return result;\n\n    //return vec4(vec3(1,0,0), -abs(box.exit_dist));\n\n}\n\n// more like a bad shadowmap\n// idea for the future: precompute the horizon per pixel: https://youtu.be/LluCbGdi-RM\nfloat shadow(Ray sun_ray){\n    // return the amount of shadowed?\n    // we are now marching upwards from some hit\n    // ro is essentially the point we started from\n    // rd is the sun angle\n    RaycastInfo res = raycast(sun_ray);\n    //return res.a;\n    if (!res.hit){// || (ro + rd*res.a).z >= HEIGHT_SCALE){\n        return 1.0; // miss means full sunlight!\n    }\n    else {\n        // TODO: use distance?\n        return 0.1; // additional ambient light from here?\n    }\n}\n\n// struct for lights? colored light?\nfloat point_light(vec3 start, vec3 light_pos, float light_intensity, vec3 normal){\n    float amount;\n    \n    vec3 light_dir = normalize(light_pos - start);\n    float light_dist = distance(start, light_pos);\n    // Ray(hit+0.001*SUN, SUN, 1.0/SUN);\n    Ray light_cast = Ray(start + 0.001*light_dir, light_dir, 1.0/light_dir);\n    RaycastInfo res = raycast(light_cast);\n    \n    if (!res.hit || res.dist > light_dist) {\n        // either we miss geometry or we hit gometry behind the light\n        amount = inversesqrt(light_dist)* light_intensity;\n        amount = max(0.0, dot(normal, light_dir)); // needs hint info from raycast\n    }\n    else {\n        // hit an intersection before the light, so don't see the light!\n        amount = 0.0;        \n    }\n    \n    // TODO still needs dot normal!\n    return amount;\n}\n\n\n\n// copied from https://www.shadertoy.com/view/M3jGzh\nfloat checkerboard(vec2 check_uv, float cells){\n    check_uv *= cells/2.0;\n    float rows = float(mod(check_uv.y, 1.0) <= 0.5);\n    float cols = float(mod(check_uv.x, 1.0) <= 0.5);\n    return float(rows == cols);\n}\n\nvec4 sampleGround(vec3 ro, vec3 rd){\n    // for any ray that misses the heightmap\n    // TODO: rename to sample skybox maybe? as the ground is sorta part of that...\n    float ground_height = 0.0;\n    float ground_dist = (ground_height-ro.z)/rd.z;\n    if (ground_dist < 0.0) {\n        // essentially sky hit instead?\n        // just some random skybox right now... could be improved of course!\n        vec3 col = vec3(0.23, 0.59, 0.92)*exp(dot(SUN, rd)-0.8);\n        col = clamp(col, vec3(0.0), vec3(1.0));\n        return vec4(col, 30.0); // some random distance that is positive!\n    }\n\n    vec3 ground_hit = ro + (rd * ground_dist);\n\n    float val = checkerboard(ground_hit.xy, 8.0)* 0.1;\n    val += 0.45;\n    //val *= 2.0 - length(abs(ground_hit));\n\n    // fake sun angle spotlight... TODO actual angle and normal calculation!\n    //val *= 2.5 - min(2.3, length((-SUN-ground_hit)));//,vec3(0.0,0.0,1.0));\n\n    vec3 col = vec3(val);\n    return vec4(col, ground_dist);\n}\n\nvoid mainImage( out vec4 fragColor, in vec2 fragCoord )\n{\n    // uv normalized to [-1..1] for height with more width\n    vec2 uv = (2.0*fragCoord - iResolution.xy)/iResolution.y;\n    vec2 mo = (2.0*iMouse.xy - iResolution.xy)/iResolution.y;\n\n    //fragColor = texture(iChannel0, uv);\n    //return;\n\n    // for when it's just idling...\n    float azimuth = -1.9+iTime*0.1 + mo.x; // keeps a bit of residue of the mouse!\n    float altitude = 0.7+cos(1.5+iTime*0.25)*0.35;\n    if (sign(iMouse.z) > 0.0){\n        // orbiting camera setup\n        azimuth = PI*mo.x;\n        altitude = 0.5*PI*clamp(mo.y+1.0, -0.01, 0.99); // maybe just positive?\n    }\n\n    // make sure you don't look \"below\"\n    altitude = clamp(altitude, HEIGHT_SCALE*0.2, PI);\n\n    // a unit length orbit!\n    vec3 camera_pos = vec3(\n        cos(azimuth)*cos(altitude),\n        sin(azimuth)*cos(altitude),\n        sin(altitude));\n    // the camera is always looking \"at\" the origin or half way above it\n    vec3 look_dir = normalize(vec3(0.0, 0.0, HEIGHT_SCALE*0.5) - camera_pos);\n\n\n    // TODO moving the camera in and out over time??\n    camera_pos += look_dir * -0.75; // moving the camera \"back\" to avoid occlusions?\n    // two vectors orthogonal to this camera direction (tagents?)\n    //vec3 look_u = camera_pos + vec3(-sin(azimuth), cos(azimuth), 0.0);\n    //vec3 look_v = camera_pos + vec3(sin(altitude)*-cos(azimuth), sin(altitude)*-sin(azimuth), cos(altitude));\n\n\n    // turns out analytically these aren't correct. so using cross instead -.-\n    vec3 look_u = normalize(cross(vec3(0.0, 0.0, -1.0), look_dir));\n    vec3 look_v = normalize(cross(camera_pos, look_u)); // is this faster?\n    // camera plane(origin of each pixel) -> barycentric?\n\n    vec3 camera_plane;\n    vec3 ray_dir;\n    vec3 ray_origin;\n\n    if (FOV > 0.0){\n        // assume a pinhole camera.\n        // FOV is the horizontal fov, the given focal length becomes:\n        // the 1.0 is the sensor height.\n        float focal_length = 1.0/tan(radians(FOV*0.5));\n\n        // the ro\n        camera_plane = camera_pos - (look_dir*focal_length) + ((look_u*uv.x) + (look_v*uv.y))*-1.0; // inverted here to see upright\n        ray_origin = camera_pos;\n\n        // the rd\n        ray_dir = camera_pos-camera_plane;\n        ray_dir = normalize(ray_dir);\n    }\n\n    else {\n        // negative FOV values are interpreted as a sensor size for a orthographic camera!\n        // horizontal sensor size, -1 would be something sensible... everything else is far away\n        float sensor_size = FOV*0.5*-1.0;\n        camera_plane = camera_pos + ((look_u*uv.x)+(look_v*uv.y))*sensor_size; // wider fov = larger \"sensor\"\n        ray_dir = look_dir;\n        ray_origin = camera_plane;\n    }\n\n    Ray camera = Ray(ray_origin, ray_dir, 1.0/ray_dir);\n\n    // actual stuff happening:\n    RaycastInfo res = raycast(camera);\n    // fragColor = vec4(vec3(res.rgb),1.0);\n    //return; // early debug exit\n    if (!res.hit) {\n        // we missed the initial terrain\n        vec4 ground = sampleGround(ray_origin, ray_dir);\n        res.col = ground.rgb;\n        res.dist = ground.a;\n        res.hit_info.entry = ray_origin + (ray_dir*res.dist);\n        res.hit_info.entry_norm = vec3(0.0, 0.0, 1.0); // ground hit poitns upwards, incorrect for skybox!\n        \n    }\n    vec3 hit = res.hit_info.entry; // easier access\n\n    // ro is a bit offset to reduce start intersections that are noisey ... want a better solution one day.\n    Ray sun_check = Ray(hit+0.001*SUN, SUN, 1.0/SUN);\n\n    RaycastInfo ref = raycast(sun_check); //reflection (the full shadow)\n    //ref.col *= 1.0 - step(0.0, ref.dist); // this makes misses black?\n    \n    //float shadow_amt = shadow(sun_check); // directional light\n    float shadow_amt = point_light(hit, SUN, 0.8, res.hit_info.entry_norm);\n    // actually more light amount -.-\n    // so we add and \"ambient\" base like here\n    vec3 col = res.col * max(0.1, shadow_amt);\n\n\n    // distance fog? I don't like it so it's commented out\n    // float dist_fog = transmittance(res.a *0.015);\n    // vec3 fog_col = vec3(0.4, 0.5, 0.9);\n    // col = mix(col, fog_col, 1.0-dist_fog);\n\n    // TODO: better \"shadow\" value via actually colored shadow??\n    // vec3 col2 = res.rgb + ref.rgb*0.3;\n    // col = vec3(uv.x > 0.0 ? col.rgb : col2.rgb);\n\n    fragColor = vec4(vec3(col),1.0);\n}",
           "name": "Image",
           "description": "",
           "type": "image"
@@ -817,7 +817,7 @@
       "info": {
         "id": "X3KyRd",
         "date": "1737245413",
-        "viewed": 87,
+        "viewed": 89,
         "name": "bounding box development",
         "username": "jakel101",
         "description": "trying to figure out how this would work (without looking it up)\n\nneeded for this unreleased one: https://www.shadertoy.com/view/lXycDz",
@@ -830,7 +830,7 @@
           "cube"
         ],
         "hasliked": 0,
-        "retrieved": "2025-08-09T22:07:12.532217+00:00"
+        "retrieved": "2025-08-13T20:37:17.529453+00:00"
       },
       "renderpass": [
         {
@@ -853,7 +853,7 @@
       "info": {
         "id": "lXyyzR",
         "date": "1735848777",
-        "viewed": 139,
+        "viewed": 140,
         "name": "Persistent Music Visualizer",
         "username": "jakel101",
         "description": "to have some of the element be reactive over time, the persistence is done over time in a Buffer.\nChange the Music in Buffer A Channel1\nChange channel0 to be sampled nearest instead of linear\ndeveloped on 165 Hz, might look worse on 60!",
@@ -867,7 +867,7 @@
           "infinity"
         ],
         "hasliked": 0,
-        "retrieved": "2025-08-09T22:07:12.532217+00:00"
+        "retrieved": "2025-08-13T20:37:17.529453+00:00"
       },
       "renderpass": [
         {
@@ -947,7 +947,7 @@
       "info": {
         "id": "4XcyR2",
         "date": "1735523996",
-        "viewed": 175,
+        "viewed": 176,
         "name": "particles by density? (wip)",
         "username": "jakel101",
         "description": "I had some ideas for 3D voxels, so I am trying a 2D thing first... not sure where this will go-\n\nidea is end up with something emergent that approximates gravity",
@@ -961,7 +961,7 @@
           "cellular"
         ],
         "hasliked": 0,
-        "retrieved": "2025-08-09T22:07:12.532217+00:00"
+        "retrieved": "2025-08-13T20:37:17.529453+00:00"
       },
       "renderpass": [
         {
@@ -1041,7 +1041,7 @@
       "info": {
         "id": "4XdcRr",
         "date": "1734655998",
-        "viewed": 116,
+        "viewed": 119,
         "name": "undefined bitshift visulizer",
         "username": "jakel101",
         "description": "the spec says that bitshifts greater than 31 bits are undefined. and the signed bit gets pushed away to.\nSo what do you see here?",
@@ -1054,7 +1054,7 @@
           "debug"
         ],
         "hasliked": 0,
-        "retrieved": "2025-08-09T21:42:21.238037+00:00"
+        "retrieved": "2025-08-13T20:37:17.529453+00:00"
       },
       "renderpass": [
         {
@@ -1077,7 +1077,7 @@
       "info": {
         "id": "XXdyRn",
         "date": "1734642443",
-        "viewed": 89,
+        "viewed": 91,
         "name": "operator precedence: << and + ",
         "username": "jakel101",
         "description": "so what do you see? and what is correct according to the spec? https://registry.khronos.org/OpenGL/specs/es/3.0/GLSL_ES_Specification_3.00.pdf 5.1 Operator precedence has addition above bitwise shift\ncorrect should be bot left like top left/right?",
@@ -1090,7 +1090,7 @@
           "bug"
         ],
         "hasliked": 0,
-        "retrieved": "2025-08-09T21:42:21.238037+00:00"
+        "retrieved": "2025-08-13T20:37:17.529453+00:00"
       },
       "renderpass": [
         {
@@ -1113,7 +1113,7 @@
       "info": {
         "id": "4cyBzy",
         "date": "1734198534",
-        "viewed": 114,
+        "viewed": 116,
         "name": "Ray(line) distance functions",
         "username": "jakel101",
         "description": "mostly figuring this out myself, but pen and paper and some references help.\n\nDirected ray has an origin and direction. I use a single float as the direction in radians (but a point or vector would also work), 0 is top.",
@@ -1127,7 +1127,7 @@
           "distance"
         ],
         "hasliked": 0,
-        "retrieved": "2025-08-09T21:42:21.238037+00:00"
+        "retrieved": "2025-08-13T20:37:17.529453+00:00"
       },
       "renderpass": [
         {
@@ -1150,7 +1150,7 @@
       "info": {
         "id": "XctfWS",
         "date": "1733434292",
-        "viewed": 113,
+        "viewed": 115,
         "name": "Angle in revolutions",
         "username": "jakel101",
         "description": "took me a while to figure out that atan exist with two parameters too. the rescaling with mod is a bit odd, taken from here: https://www.shadertoy.com/view/4s3BR8",
@@ -1162,7 +1162,7 @@
           "trigonometry"
         ],
         "hasliked": 0,
-        "retrieved": "2025-08-09T21:42:21.238037+00:00"
+        "retrieved": "2025-08-13T20:37:17.529453+00:00"
       },
       "renderpass": [
         {
@@ -1185,7 +1185,7 @@
       "info": {
         "id": "M3fyR8",
         "date": "1733178754",
-        "viewed": 124,
+        "viewed": 126,
         "name": "Party Lights for Live Coding!",
         "username": "jakel101",
         "description": "hommage to TM Rave!\ncontributions, golfing welcome, use as you please!",
@@ -1200,7 +1200,7 @@
           "golf"
         ],
         "hasliked": 0,
-        "retrieved": "2025-08-09T21:42:21.238037+00:00"
+        "retrieved": "2025-08-13T20:37:17.529453+00:00"
       },
       "renderpass": [
         {
@@ -1223,7 +1223,7 @@
       "info": {
         "id": "lfdBz8",
         "date": "1732897530",
-        "viewed": 43,
+        "viewed": 47,
         "name": "ideas for caleb",
         "username": "jakel101",
         "description": "trying to make a reference idea for certain stream\n\nnot done yet. published unfinished - might revisit in a year",
@@ -1237,7 +1237,7 @@
           "textures"
         ],
         "hasliked": 0,
-        "retrieved": "2025-07-27T23:40:44.865504+00:00"
+        "retrieved": "2025-08-13T20:37:17.529453+00:00"
       },
       "renderpass": [
         {
@@ -1260,7 +1260,7 @@
       "info": {
         "id": "MfKcWt",
         "date": "1732834986",
-        "viewed": 135,
+        "viewed": 142,
         "name": "fake 3D pipes",
         "username": "jakel101",
         "description": "trying to figure this out on my own... Motivated by this video https://youtu.be/OV_ZN-8uy4w (segment at 4:45)\n(change SCALE to other values?)\nmouse moves the \"light source\", time animates it's height.",
@@ -1275,7 +1275,7 @@
           "pattern"
         ],
         "hasliked": 0,
-        "retrieved": "2025-07-27T23:40:44.865504+00:00"
+        "retrieved": "2025-08-13T20:37:17.529453+00:00"
       },
       "renderpass": [
         {
@@ -1298,7 +1298,7 @@
       "info": {
         "id": "Xfyyzd",
         "date": "1732231413",
-        "viewed": 116,
+        "viewed": 120,
         "name": "fake shadow cone?",
         "username": "jakel101",
         "description": "getting practice in by writing shaders purely from my head of some ideas.",
@@ -1311,7 +1311,7 @@
           "shadow"
         ],
         "hasliked": 0,
-        "retrieved": "2025-07-27T23:40:44.865504+00:00"
+        "retrieved": "2025-08-13T20:37:17.529453+00:00"
       },
       "renderpass": [
         {
@@ -1334,7 +1334,7 @@
       "info": {
         "id": "XcVyDW",
         "date": "1731888580",
-        "viewed": 132,
+        "viewed": 140,
         "name": "experiments with squish",
         "username": "jakel101",
         "description": "[mouse control on]\njust trying to come up with some implementation of squishing myself... not quite sure what's possible\nwant to extend this to 3D one day and also use in a physics simulation...",
@@ -1348,7 +1348,7 @@
           "amorphous"
         ],
         "hasliked": 0,
-        "retrieved": "2025-07-27T23:40:44.865504+00:00"
+        "retrieved": "2025-08-13T20:37:17.529453+00:00"
       },
       "renderpass": [
         {

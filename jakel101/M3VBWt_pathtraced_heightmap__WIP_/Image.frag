@@ -145,20 +145,32 @@ vec4 sampleHeight(ivec2 cell){
     return res;
 }
 
+struct RaycastInfo{
+    bool hit; // if negative, the rest is undefined.
+    float dist; // hit_info.entry_dist redundant?
+    ivec2 cell; //current_cell?
+    HitInfo hit_info; //has the entry norm etc.
+    vec3 col; // TODO: replace with material
+    //Ray ray; //just as a reference?
+};
 
-vec4 raycast(Ray ray){
+
+RaycastInfo raycast(Ray ray){
     // cast the ray untill there is a hit or we exit the box
     // "any hit" shader?
     // returns tex + dist, negative dist means a "miss"
     // the inout for clouds sums up it's distance and depth of clouds.
+    RaycastInfo result;
+    
     HitInfo box = AABB(vec3(0.0, 0.0, HEIGHT_SCALE*0.5), vec3(1.0, 1.0, HEIGHT_SCALE*0.5), ray);
 
     vec3 entry = box.entry;
 
     if (!box.hit){
         // if we "MISS" the whole box (not inside?).
-
-        return vec4(vec3(0.2, 0.8, 0.0), -abs(box.exit_dist));
+        result.hit = false;
+        return result;
+        //return vec4(vec3(0.2, 0.8, 0.0), -abs(box.exit_dist));
     }
     // everything below here is inside the box
     if (box.inside){
@@ -178,7 +190,9 @@ vec4 raycast(Ray ray){
         if (current_cell.x < 0 || current_cell.x >= CELLS.x ||
             current_cell.y < 0 || current_cell.y >= CELLS.y){
             // we marched far enough are are "outside the box" now!
-            return vec4(vec3(0.4), -abs(box.exit_dist));
+            result.hit = false;
+            return result;
+            // return vec4(vec3(0.4), -abs(box.exit_dist));
         }
 
         vec4 tex = sampleHeight(current_cell);
@@ -192,13 +206,20 @@ vec4 raycast(Ray ray){
             // TODO: assume some base "emissive" quality to all pillars (or scaled with some value?)
             // needs better hit model and shader to accumulate over a few traces.
             // TODO: should one of them be negative?
-            col *= max(0.0, dot(pillar.entry_norm, SUN)); // where does the 2.0 factor came from?
-            return vec4(col, abs(pillar.entry_dist));
+            //col *= max(0.0, dot(pillar.entry_norm, SUN)); // where does the 2.0 factor came from?
+            result.hit = true;
+            result.hit_info = pillar;
+            result.dist = pillar.entry_dist;
+            result.col = col;
+            return result;
+            //return vec4(col, abs(pillar.entry_dist));
         }
 
         // check if our exit distance larger than the box, means we should be at the final pillar...
         if (pillar.exit_dist >= box.exit_dist){
-            return vec4(vec3(0.8), -abs(pillar.exit_dist));
+            result.hit = false;
+            return result;
+            //return vec4(vec3(0.8), -abs(pillar.exit_dist));
         }
 
         // the step
@@ -218,7 +239,10 @@ vec4 raycast(Ray ray){
     //return vec4(vec2(current_cell)/vec2(CELLS), 0.0, 0.0);
     // defualt "miss"? -> like we exit the box?
 
-    return vec4(vec3(1,0,0), -abs(box.exit_dist));
+    result.hit = false;
+    return result;
+
+    //return vec4(vec3(1,0,0), -abs(box.exit_dist));
 
 }
 
@@ -229,9 +253,9 @@ float shadow(Ray sun_ray){
     // we are now marching upwards from some hit
     // ro is essentially the point we started from
     // rd is the sun angle
-    vec4 res = raycast(sun_ray);
+    RaycastInfo res = raycast(sun_ray);
     //return res.a;
-    if (res.a < 0.0){// || (ro + rd*res.a).z >= HEIGHT_SCALE){
+    if (!res.hit){// || (ro + rd*res.a).z >= HEIGHT_SCALE){
         return 1.0; // miss means full sunlight!
     }
     else {
@@ -239,6 +263,32 @@ float shadow(Ray sun_ray){
         return 0.1; // additional ambient light from here?
     }
 }
+
+// struct for lights? colored light?
+float point_light(vec3 start, vec3 light_pos, float light_intensity, vec3 normal){
+    float amount;
+    
+    vec3 light_dir = normalize(light_pos - start);
+    float light_dist = distance(start, light_pos);
+    // Ray(hit+0.001*SUN, SUN, 1.0/SUN);
+    Ray light_cast = Ray(start + 0.001*light_dir, light_dir, 1.0/light_dir);
+    RaycastInfo res = raycast(light_cast);
+    
+    if (!res.hit || res.dist > light_dist) {
+        // either we miss geometry or we hit gometry behind the light
+        amount = inversesqrt(light_dist)* light_intensity;
+        amount = max(0.0, dot(normal, light_dir)); // needs hint info from raycast
+    }
+    else {
+        // hit an intersection before the light, so don't see the light!
+        amount = 0.0;        
+    }
+    
+    // TODO still needs dot normal!
+    return amount;
+}
+
+
 
 // copied from https://www.shadertoy.com/view/M3jGzh
 float checkerboard(vec2 check_uv, float cells){
@@ -268,7 +318,7 @@ vec4 sampleGround(vec3 ro, vec3 rd){
     //val *= 2.0 - length(abs(ground_hit));
 
     // fake sun angle spotlight... TODO actual angle and normal calculation!
-    val *= 2.5 - min(2.3, length((-SUN-ground_hit)));//,vec3(0.0,0.0,1.0));
+    //val *= 2.5 - min(2.3, length((-SUN-ground_hit)));//,vec3(0.0,0.0,1.0));
 
     vec3 col = vec3(val);
     return vec4(col, ground_dist);
@@ -347,29 +397,31 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     Ray camera = Ray(ray_origin, ray_dir, 1.0/ray_dir);
 
     // actual stuff happening:
-    vec4 res = raycast(camera);
+    RaycastInfo res = raycast(camera);
     // fragColor = vec4(vec3(res.rgb),1.0);
     //return; // early debug exit
-    if (res.a < 0.0) {
+    if (!res.hit) {
         // we missed the initial terrain
-        res = sampleGround(ray_origin, ray_dir);
-
-        // TODO: the skybox hit returns a negative distance, so we need to handle that
-        //res.a = abs(res.a);
+        vec4 ground = sampleGround(ray_origin, ray_dir);
+        res.col = ground.rgb;
+        res.dist = ground.a;
+        res.hit_info.entry = ray_origin + (ray_dir*res.dist);
+        res.hit_info.entry_norm = vec3(0.0, 0.0, 1.0); // ground hit poitns upwards, incorrect for skybox!
+        
     }
-    vec3 hit = ray_origin + (ray_dir*res.a);
+    vec3 hit = res.hit_info.entry; // easier access
 
     // ro is a bit offset to reduce start intersections that are noisey ... want a better solution one day.
     Ray sun_check = Ray(hit+0.001*SUN, SUN, 1.0/SUN);
 
-    vec4 ref = raycast(sun_check).rgba; //reflection (the full shadow)
-    ref.rgb *= 1.0 - step(0.0, ref.a); // this makes misses black?
-    // ref.rgb *= 1.0-exp(-shadow_cloud*15.0); // more "realistic" cloud shadow?
-
-    float shadow_amt = shadow(sun_check);
+    RaycastInfo ref = raycast(sun_check); //reflection (the full shadow)
+    //ref.col *= 1.0 - step(0.0, ref.dist); // this makes misses black?
+    
+    //float shadow_amt = shadow(sun_check); // directional light
+    float shadow_amt = point_light(hit, SUN, 0.8, res.hit_info.entry_norm);
     // actually more light amount -.-
     // so we add and "ambient" base like here
-    vec3 col = res.rgb * max(0.3, shadow_amt);
+    vec3 col = res.col * max(0.1, shadow_amt);
 
 
     // distance fog? I don't like it so it's commented out

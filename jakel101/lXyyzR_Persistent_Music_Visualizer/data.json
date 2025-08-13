@@ -3,7 +3,7 @@
   "info": {
     "id": "lXyyzR",
     "date": "1735848777",
-    "viewed": 139,
+    "viewed": 140,
     "name": "Persistent Music Visualizer",
     "username": "jakel101",
     "description": "to have some of the element be reactive over time, the persistence is done over time in a Buffer.\nChange the Music in Buffer A Channel1\nChange channel0 to be sampled nearest instead of linear\ndeveloped on 165 Hz, might look worse on 60!",
@@ -17,7 +17,7 @@
       "infinity"
     ],
     "hasliked": 0,
-    "retrieved": "2025-08-09T22:07:12.532217+00:00"
+    "retrieved": "2025-08-13T20:37:17.529453+00:00"
   },
   "renderpass": [
     {
