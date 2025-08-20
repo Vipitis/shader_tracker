@@ -52,6 +52,36 @@ BoxHit AABB(vec3 center, vec3 size, Ray ray){
     return res;
 }
 
+// with help from: https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-sphere-intersection.html
+BoxHit Sphere(vec3 center, float radius, Ray ray){
+    BoxHit res;    
+    vec3 local = ray.origin - center;
+        
+    float a = dot(ray.dir, ray.dir);
+    float b = 2.0* dot(ray.dir, local);
+    float c = dot(local, local) - pow(radius,2.0);
+        
+    float discriminant = pow(b,2.0) - 4.0*a*c;
+    
+    res.hit = discriminant >= 0.0;
+    
+    float t0 = (-b + sqrt(discriminant))/ (2.0*a);
+    float t1 = (-b - sqrt(discriminant))/ (2.0*a);
+
+    res.entry_dist = min(t0, t1);
+    res.exit_dist = max(t0, t1);
+
+    res.entry = ray.origin + ray.dir * res.entry_dist;
+    res.exit = ray.origin + ray.dir * res.exit_dist;
+
+    res.entry_norm = normalize(res.entry - center);
+    res.exit_norm = normalize(res.exit - center);
+    
+    res.inside = res.entry_dist < 0.0; // entry behind us
+
+    return res;
+}
+
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     // uv normalized to [-1..1] for height with more width
@@ -126,6 +156,9 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     Ray camera = Ray(ray_origin, ray_dir, 1.0/ray_dir);
     BoxHit res = AABB(vec3(0.0, sin(iTime*0.2), 0.0), vec3(0.5), camera);
     
+    //res = Sphere(vec3(0.0), 0.4, camera);
+    BoxHit res2 = Sphere(vec3(0.0, 0.0, cos(iTime*0.4)), 0.4, camera);
+        
     vec3 col = vec3(0.05);
     
     if (res.hit) {
@@ -138,6 +171,14 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     else {
         //col = res.exit_norm + vec3(0.5);
     }
+    
+    if (res2.hit && ((res2.entry_dist > res.exit_dist) || !res.hit) ) {
+        col = res2.entry_norm + vec3(0.5);
+            
+    
+    }
+    
+    
     
     fragColor = vec4(col, 1.0);
     

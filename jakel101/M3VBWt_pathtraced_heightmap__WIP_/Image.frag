@@ -11,7 +11,7 @@
 * todo(ideas):
 * - monte carlo light simulation
 * - pysics simulation
-* - point/ball/area lights
+* - ball/area lights
 * - infinite/LOD tiles?
 * - DDA like traversal
 * - cleanup as usual
@@ -34,6 +34,9 @@
 // FOV 90.0 for perspective wide
 // FOV 45.0 for perspective narower
 # define FOV 90.0
+
+// how far "behind" the camera is behind the arcball
+# define CAMERA_DIST -0.75
 
 
 // next project: actual structs for easier pathracing:
@@ -109,6 +112,36 @@ HitInfo AABB(vec3 center, vec3 size, Ray ray){
     return res;
 }
 
+// with help from: https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-sphere-intersection.html
+HitInfo Sphere(vec3 center, float radius, Ray ray){
+    HitInfo res;
+    vec3 local = ray.origin - center;
+        
+    float a = dot(ray.dir, ray.dir);
+    float b = 2.0* dot(ray.dir, local);
+    float c = dot(local, local) - pow(radius,2.0);
+        
+    float discriminant = pow(b,2.0) - 4.0*a*c;
+    
+    res.hit = discriminant >= 0.0;
+    
+    float t0 = (-b + sqrt(discriminant))/ (2.0*a);
+    float t1 = (-b - sqrt(discriminant))/ (2.0*a);
+
+    res.entry_dist = min(t0, t1);
+    res.exit_dist = max(t0, t1);
+
+    res.entry = ray.origin + ray.dir * res.entry_dist;
+    res.exit = ray.origin + ray.dir * res.exit_dist;
+
+    res.entry_norm = normalize(res.entry - center);
+    res.exit_norm = normalize(res.exit - center);
+    
+    res.inside = res.entry_dist < 0.0; // entry behind us
+
+    return res;
+}
+
 
 HitInfo pillar_hits(ivec2 cell, float height, Ray ray){
     // let's move the pillar into world space by having it's center + extends
@@ -137,7 +170,8 @@ vec4 sampleHeight(ivec2 cell){
     //cell.x = (cell.x + iFrame) % int(iChannelResolution[0].x); // fun texture scroll
     vec4 tex = texelFetch(iChannel0, cell, 0);
     vec4 res;
-    res.a = tex.r; // our height data is in this channel
+    res.a = tex.r + tex.g, tex.b; // we do height by a sum of the color for now
+    res.a *= 0.5;
     res.rgb = tex.rgb; // simply copy the color as the "texture" for now
     
     // res.a = tex.a; // debug/use existing height data.
@@ -158,8 +192,6 @@ struct RaycastInfo{
 RaycastInfo raycast(Ray ray){
     // cast the ray untill there is a hit or we exit the box
     // "any hit" shader?
-    // returns tex + dist, negative dist means a "miss"
-    // the inout for clouds sums up it's distance and depth of clouds.
     RaycastInfo result;
     
     HitInfo box = AABB(vec3(0.0, 0.0, HEIGHT_SCALE*0.5), vec3(1.0, 1.0, HEIGHT_SCALE*0.5), ray);
@@ -170,18 +202,14 @@ RaycastInfo raycast(Ray ray){
         // if we "MISS" the whole box (not inside?).
         result.hit = false;
         return result;
-        //return vec4(vec3(0.2, 0.8, 0.0), -abs(box.exit_dist));
+        
     }
     // everything below here is inside the box
     if (box.inside){
         // if we are "inside" the entry should just be ro!
         entry = ray.origin; // maybe problems with distance caluclations at the end?
     }
-
-    //return vec4(vec3(0.6), 1.0);
-
-    //return entry.rgbb;
-
+    
     ivec2 current_cell = worldToCell(entry); // TODO: this one is problematic!
     int i;
     ivec2 max_cells = CELLS - min(current_cell, CELLS-current_cell);
@@ -190,9 +218,8 @@ RaycastInfo raycast(Ray ray){
         if (current_cell.x < 0 || current_cell.x >= CELLS.x ||
             current_cell.y < 0 || current_cell.y >= CELLS.y){
             // we marched far enough are are "outside the box" now!
-            result.hit = false;
+            result.hit = false;            
             return result;
-            // return vec4(vec3(0.4), -abs(box.exit_dist));
         }
 
         vec4 tex = sampleHeight(current_cell);
@@ -202,27 +229,22 @@ RaycastInfo raycast(Ray ray){
             // "any hit" (side/top/bot) -> loop ends here
             // do a little bit of light sim by doing diffuse "block of chalk"
             vec3 col = tex.rgb;
-            // half the phong diffuse
-            // TODO: assume some base "emissive" quality to all pillars (or scaled with some value?)
-            // needs better hit model and shader to accumulate over a few traces.
-            // TODO: should one of them be negative?
-            //col *= max(0.0, dot(pillar.entry_norm, SUN)); // where does the 2.0 factor came from?
+            // TODO materail decision here?
             result.hit = true;
             result.hit_info = pillar;
             result.dist = pillar.entry_dist;
             result.col = col;
-            return result;
-            //return vec4(col, abs(pillar.entry_dist));
+            return result;            
         }
 
         // check if our exit distance larger than the box, means we should be at the final pillar...
         if (pillar.exit_dist >= box.exit_dist){
             result.hit = false;
-            return result;
-            //return vec4(vec3(0.8), -abs(pillar.exit_dist));
+            return result; // do we ever get here?
         }
 
         // the step
+        // TODO: DDA style decision
         ivec2 next_cell = current_cell + ivec2(pillar.exit_norm.xy);
         if (next_cell == current_cell){
             // in this case we do another raycast - but without any Z component
@@ -236,32 +258,35 @@ RaycastInfo raycast(Ray ray){
         // for next iteration
         current_cell = next_cell;
     }
-    //return vec4(vec2(current_cell)/vec2(CELLS), 0.0, 0.0);
-    // defualt "miss"? -> like we exit the box?
-
+    
     result.hit = false;
     return result;
-
-    //return vec4(vec3(1,0,0), -abs(box.exit_dist));
-
 }
 
 // more like a bad shadowmap
 // idea for the future: precompute the horizon per pixel: https://youtu.be/LluCbGdi-RM
-float shadow(Ray sun_ray){
+float directional_light(Ray sun_ray, vec3 normal){
     // return the amount of shadowed?
     // we are now marching upwards from some hit
     // ro is essentially the point we started from
     // rd is the sun angle
     RaycastInfo res = raycast(sun_ray);
     //return res.a;
+    
+    //TODO: intensity/color?
+    
+    float amt = 1.0;
+    
+    
     if (!res.hit){// || (ro + rd*res.a).z >= HEIGHT_SCALE){
-        return 1.0; // miss means full sunlight!
+        // miss means full sunlight!
+        amt = max(0.0, dot(sun_ray.dir, normal));
     }
     else {
         // TODO: use distance?
-        return 0.1; // additional ambient light from here?
+        amt = 0.1; // additional ambient light from here?
     }
+    return amt;
 }
 
 // struct for lights? colored light?
@@ -277,7 +302,7 @@ float point_light(vec3 start, vec3 light_pos, float light_intensity, vec3 normal
     if (!res.hit || res.dist > light_dist) {
         // either we miss geometry or we hit gometry behind the light
         amount = inversesqrt(light_dist)* light_intensity;
-        amount = max(0.0, dot(normal, light_dir)); // needs hint info from raycast
+        amount *= max(0.0, dot(normal, light_dir));
     }
     else {
         // hit an intersection before the light, so don't see the light!
@@ -355,7 +380,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
 
     // TODO moving the camera in and out over time??
-    camera_pos += look_dir * -0.75; // moving the camera "back" to avoid occlusions?
+    camera_pos += look_dir * CAMERA_DIST; // moving the camera "back" to avoid occlusions?
     // two vectors orthogonal to this camera direction (tagents?)
     //vec3 look_u = camera_pos + vec3(-sin(azimuth), cos(azimuth), 0.0);
     //vec3 look_v = camera_pos + vec3(sin(altitude)*-cos(azimuth), sin(altitude)*-sin(azimuth), cos(altitude));
@@ -406,6 +431,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         res.col = ground.rgb;
         res.dist = ground.a;
         res.hit_info.entry = ray_origin + (ray_dir*res.dist);
+        res.hit_info.entry_dist = res.dist;
         res.hit_info.entry_norm = vec3(0.0, 0.0, 1.0); // ground hit poitns upwards, incorrect for skybox!
         
     }
@@ -417,11 +443,25 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     RaycastInfo ref = raycast(sun_check); //reflection (the full shadow)
     //ref.col *= 1.0 - step(0.0, ref.dist); // this makes misses black?
     
-    //float shadow_amt = shadow(sun_check); // directional light
-    float shadow_amt = point_light(hit, SUN, 0.8, res.hit_info.entry_norm);
-    // actually more light amount -.-
-    // so we add and "ambient" base like here
-    vec3 col = res.col * max(0.1, shadow_amt);
+    // TODO: can we parameterize this via macros?
+    // float light1_amt = directional_light(sun_check, res.hit_info.entry_norm); // directional light
+    float light2_amt = point_light(hit, SUN, 1.0, res.hit_info.entry_norm);        
+    
+    
+    float light_amt; // = (light1_amt + light2_amt)* 0.5;
+    light_amt = light2_amt;
+    
+    // shitty ambient
+    vec3 col = res.col * max(0.1, light_amt);
+    
+    HitInfo ball = Sphere(SUN, 0.15, camera);
+    if (ball.hit && (!res.hit || ball.entry_dist < res.dist)){
+        //col = vec3(0.9, 0.8, 0.2);
+        vec3 ball_reflection = refract(camera.dir, ball.entry_norm, 0.95);
+        Ray ball_bounce = Ray(ball.entry, ball_reflection, 1.0/ball_reflection);
+        RaycastInfo bounce = raycast(ball_bounce);
+        col = vec3(1.0) - bounce.col*1.0;
+    }
 
 
     // distance fog? I don't like it so it's commented out
