@@ -8,8 +8,8 @@ from wgpu_shadertoy.api import _get_api_key, shadertoy_from_id
 import argparse
 
 arg_parser = argparse.ArgumentParser(description="Gather Shadertoy shaders to update")
-arg_parser.add_argument("--lookback", type=int, default=2, help="Number of consecutive shaders that must be different to stop gathering new shaders")
-
+arg_parser.add_argument("ids", type=str, nargs="*", default=None, help="main arg, space separated list of shader IDs to update")
+arg_parser.add_argument("--lookback", type=int, default=2, help="Number of most recent shaders to update, defaults to 2")
 
 
 USER_NAME = "jakel101"  # maybe let the user configure this somehow?
@@ -57,7 +57,7 @@ if __name__ == "__main__":
     shader_ids = get_users_shader_ids(USER_NAME)
     # TODO verbosity flag?
     print(f"Found {len(shader_ids)} shaders for user {USER_NAME!r} on the API")
-    local_shaders = get_local_shaders(USER_NAME)
+    local_shaders = get_local_shaders(USER_NAME) # from sorted, not the combined json!
     local_ids = local_shaders.keys() # redundant?
     print(f"Found {len(local_ids)} shaders for user {USER_NAME!r} locally")
     missing_ids = set(shader_ids) - set(local_ids)
@@ -65,29 +65,46 @@ if __name__ == "__main__":
         print(f"Found {len(missing_ids)} shader missing locally")
         # TODO: download only missing shaders (maybe via a CLI flag?)
 
-    # TODO: only download all if flag is set
-    all_data = [] # maybe more like "new_data?"
-    same_count = 0
-    updated_ids = set()
-    for shader_id in tqdm(shader_ids):
-        if same_count >= args.lookback:
-            # TODO: might be unsorted if there is a larger gap? ( I need a repeatable test case for this...)
-            all_data = all_data + [{"Shader":s} for i,s in local_shaders.items() if i not in updated_ids] # inline extend to prepend?
-            break
-        shader_data = shadertoy_from_id(shader_id) # this is the slow part!!
-        shader_data["Shader"]["info"]["retrieved"] = retrieval_time
-        if shader_data["Shader"]["info"]["username"] != USER_NAME:
-            continue  # skip any false hits (past download?)
+    if args.ids:
+        requested_ids = [r.strip().rstrip("/").split("/")[-1] for r in args.ids]
+        print(f"Gathering {len(requested_ids)} shaders {requested_ids!r} as requested")
 
-        # compare with the local variant, changes in views or name or etc will be missed
-        local_version = local_shaders.get(shader_id, {"renderpass":None})
-        if shader_data["Shader"]["renderpass"] == local_version["renderpass"]:
-            same_count += 1
-        else:
-            same_count = 0  # reset (or not?)
-            # we could only update here to avoid just making changes to metrics?
-        all_data.append(shader_data)
-        updated_ids.add(shader_id) # keep track of where we have new information.
+    ids_to_update = set.union(missing_ids, set(requested_ids))
+
+    if args.lookback:        
+        ids_to_update = set.union(ids_to_update, set(list(local_ids)[:args.lookback]))
+
+
+    for shader_id in tqdm(list(ids_to_update)):
+        shader_data = shadertoy_from_id(shader_id)
+        shader_data["Shader"]["info"]["retrieved"] = retrieval_time
+        local_shaders.update({shader_id: shader_data["Shader"]})
+
+    all_data = [{"Shader":s} for i,s in local_shaders.items()]
+
+    # TODO: only download all if flag is set
+    # all_data = [] # maybe more like "new_data?"
+    # same_count = 0
+    # updated_ids = set()
+    # for shader_id in tqdm(shader_ids):
+    #     if same_count >= args.lookback:
+    #         # TODO: might be unsorted if there is a larger gap? ( I need a repeatable test case for this...)
+    #         all_data = all_data + [{"Shader":s} for i,s in local_shaders.items() if i not in updated_ids] # inline extend to prepend?
+    #         break
+    #     shader_data = shadertoy_from_id(shader_id) # this is the slow part!!
+    #     shader_data["Shader"]["info"]["retrieved"] = retrieval_time
+    #     if shader_data["Shader"]["info"]["username"] != USER_NAME:
+    #         continue  # skip any false hits (past download?)
+
+    #     # compare with the local variant, changes in views or name or etc will be missed
+    #     local_version = local_shaders.get(shader_id, {"renderpass":None})
+    #     if shader_data["Shader"]["renderpass"] == local_version["renderpass"]:
+    #         same_count += 1
+    #     else:
+    #         same_count = 0  # reset (or not?)
+    #         # we could only update here to avoid just making changes to metrics?
+    #     all_data.append(shader_data)
+    #     updated_ids.add(shader_id) # keep track of where we have new information.
 
 
     # TODO: do we want a "delta" file instead to hand to stdout and than handle sort.py as an append too?
