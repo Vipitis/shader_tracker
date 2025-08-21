@@ -170,8 +170,8 @@ vec4 sampleHeight(ivec2 cell){
     //cell.x = (cell.x + iFrame) % int(iChannelResolution[0].x); // fun texture scroll
     vec4 tex = texelFetch(iChannel0, cell, 0);
     vec4 res;
-    res.a = tex.r + tex.g, tex.b; // we do height by a sum of the color for now
-    res.a *= 0.5;
+    res.a = tex.r + tex.g + tex.b; // we do height by a sum of the color for now
+    res.a *= 0.33;
     res.rgb = tex.rgb; // simply copy the color as the "texture" for now
     
     // res.a = tex.a; // debug/use existing height data.
@@ -419,6 +419,11 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         ray_origin = camera_plane;
     }
 
+    // todo extract to a function
+    // Ray in -> material/normal out?
+    // caluclate and aggregate light throughput?
+    // new ray direction based on sampled material/refraction?
+
     Ray camera = Ray(ray_origin, ray_dir, 1.0/ray_dir);
 
     // actual stuff happening:
@@ -454,13 +459,20 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     // shitty ambient
     vec3 col = res.col * max(0.1, light_amt);
     
-    HitInfo ball = Sphere(SUN, 0.15, camera);
+    float ball_size = 0.15;
+    HitInfo ball = Sphere(SUN, ball_size, camera);
     if (ball.hit && (!res.hit || ball.entry_dist < res.dist)){
         //col = vec3(0.9, 0.8, 0.2);
-        vec3 ball_reflection = refract(camera.dir, ball.entry_norm, 0.95);
-        Ray ball_bounce = Ray(ball.entry, ball_reflection, 1.0/ball_reflection);
-        RaycastInfo bounce = raycast(ball_bounce);
-        col = vec3(1.0) - bounce.col*1.0;
+        float glass_IOR = 1.01;
+        vec3 ball_reflection = refract(camera.dir, ball.entry_norm, 1.0/glass_IOR);
+        Ray inside_ball = Ray(ball.entry, ball_reflection, 1.0/ball_reflection);
+        // should refract a 2nd time at the exit of the sphere -.- (always hits??)
+        HitInfo inside = Sphere(SUN, ball_size, inside_ball);
+        vec3 outside = refract(inside_ball.dir, inside.exit_norm, glass_IOR);
+        Ray refracted = Ray(inside.exit, outside, 1.0/outside);
+        RaycastInfo passed = raycast(refracted);
+        
+        col = 1.0 - passed.col*1.0;
     }
 
 
