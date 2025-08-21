@@ -18,22 +18,23 @@ WIP utility to track your public shadertoy shaders in a github repository.
 * [x] have a markdown gallery
     * [ ] gif previews to easily browse
 * [x] be able to set some keywords/tags to not show in the gallery
-* [ ] launch script for wgpu-shadertoy
+* [x] launch script for wgpu-shadertoy
 * [ ] only update recent shaders
     * [ ] by a given time
-    * [ ] most recent range 
-    * [x] dynamically backtrack untill there is no more change +/- puffer
-* [ ] update specific shaders (by id/link)
+    * [x] most recent range 
+    * ~~[x] dynamically backtrack untill there is no more change +/- puffer~~
+* [x] update specific shaders (by id/link)
 * [ ] (maybe) statistics over time/change?
 
 
 ### how to use:
 ```bash
-python gather.py --lookback 5
+python gather.py M3VBWt --lookback 5
 python sort.py
+python launch.py jakel101\M3VBWt_pathtraced_heightmap__WIP_ --json
 ```
 CLI flags: tbd.
 
 ### requirements:
-* [python requierements](/requierements.txt)
+* [python requirements](/requirements.txt)
 * `SHADERTOY_KEY` env var to access the API
