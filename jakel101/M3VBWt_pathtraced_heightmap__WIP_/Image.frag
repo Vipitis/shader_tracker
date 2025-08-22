@@ -6,7 +6,8 @@
 * easily configurable at the top with a few macros
 *
 * selflink: https://www.shadertoy.com/view/M3VBWt
-*
+* other projects using this shader/framework: https://www.shadertoy.com/playlist/mX2cD3
+* 
 * work in progress:
 * todo(ideas):
 * - monte carlo light simulation
@@ -38,6 +39,13 @@
 // how far "behind" the camera is behind the arcball
 # define CAMERA_DIST -0.75
 
+// TODO one variable to change between sampled and direct light
+// 0 -> directional light
+// 1 -> point light
+// 2 -> MIS? (one light, one sampled?)
+// 3+ -> bounces//samples?
+# define BOUNCES 5
+# define SAMPLES 8
 
 // next project: actual structs for easier pathracing:
 struct Material{
@@ -48,10 +56,10 @@ struct Material{
 };
 
 // exaples?
-Material white_chalk = Material(vec3(1.0), 0.0, 0.99, 0.0);
-Material ground = Material(vec3(0.5), 0.0, 0.85, 0.0);
-Material sky = Material(vec3(0.02, 0.03, 0.95), 0.5, 0.5, 0.5);
-Material glass = Material(vec3(0.95), 0.0, 0.05, 0.95);
+Material chalk = Material(vec3(1.0), 0.0, 0.95, 0.0);
+Material ground = Material(vec3(0.5), 0.125, 0.35, 0.0);
+Material sky = Material(vec3(0.02, 0.03, 0.95), 0.35, 0.8, 0.5);
+Material glass = Material(vec3(1.0), 1.0, 0.5, 0.95);
 
 
 ivec2 worldToCell(vec3 p) {
@@ -70,7 +78,13 @@ struct Ray{
     vec3 inv_dir; // for speedup?
 };
 
-struct HitInfo{
+// helper constructor
+Ray newRay(vec3 ro, vec3 rd){
+    return Ray(ro, rd, 1.0/rd);
+}
+
+
+struct IntersectionInfo{
     bool hit;
     // rest illdefined for a miss
     bool inside;
@@ -83,8 +97,8 @@ struct HitInfo{
 };
 
 // sorta reference: https://tavianator.com/2022/ray_box_boundary.html
-HitInfo AABB(vec3 center, vec3 size, Ray ray){
-    HitInfo res;
+IntersectionInfo AABB(vec3 center, vec3 size, Ray ray){
+    IntersectionInfo res;
 
     vec3 pos = center + size;
     vec3 neg = center - size;
@@ -113,8 +127,8 @@ HitInfo AABB(vec3 center, vec3 size, Ray ray){
 }
 
 // with help from: https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-sphere-intersection.html
-HitInfo Sphere(vec3 center, float radius, Ray ray){
-    HitInfo res;
+IntersectionInfo Sphere(vec3 center, float radius, Ray ray){
+    IntersectionInfo res;
     vec3 local = ray.origin - center;
         
     float a = dot(ray.dir, ray.dir);
@@ -143,7 +157,7 @@ HitInfo Sphere(vec3 center, float radius, Ray ray){
 }
 
 
-HitInfo pillar_hits(ivec2 cell, float height, Ray ray){
+IntersectionInfo pillar_hits(ivec2 cell, float height, Ray ray){
     // let's move the pillar into world space by having it's center + extends
 
     vec3 extend = vec3(1.0/vec2(CELLS), abs(height)*0.5);
@@ -159,7 +173,7 @@ HitInfo pillar_hits(ivec2 cell, float height, Ray ray){
     }
 
     // TODO: redo this math when less asleep...
-    HitInfo res = AABB(p, extend, ray);
+    IntersectionInfo res = AABB(p, extend, ray);
     return res;
 }
 
@@ -179,11 +193,49 @@ vec4 sampleHeight(ivec2 cell){
     return res;
 }
 
+// from: https://www.shadertoy.com/view/7l3yRn
+vec2 get_random_numbers(inout uvec2 seed) {
+    // This is PCG2D: https://jcgt.org/published/0009/03/02/
+    seed = 1664525u * seed + 1013904223u;
+    seed.x += 1664525u * seed.y;
+    seed.y += 1664525u * seed.x;
+    seed ^= (seed >> 16u);
+    seed.x += 1664525u * seed.y;
+    seed.y += 1664525u * seed.x;
+    seed ^= (seed >> 16u);
+    // Convert to float. The constant here is 2^-32.
+    return vec2(seed) * 2.32830643654e-10;
+}
+
+// also from above
+// TODO collaplse into one function!
+// Given uniform random numbers u_0, u_1 in [0,1)^2, this function returns a
+// uniformly distributed point on the unit sphere (i.e. a random direction)
+// (omega)
+vec3 sample_sphere(vec2 random_numbers) {
+    float z = 2.0 * random_numbers[1] - 1.0;
+    float phi = 2.0 * PI * random_numbers[0];
+    float x = cos(phi) * sqrt(1.0 - z * z);
+    float y = sin(phi) * sqrt(1.0 - z * z);
+    return vec3(x, y, z);
+}
+
+
+// Like sample_sphere() but only samples the hemisphere where the dot product
+// with the given normal (n) is >= 0
+vec3 sample_hemisphere(vec2 random_numbers, vec3 normal) {
+    vec3 direction = sample_sphere(random_numbers);
+    if (dot(normal, direction) < 0.0)
+        direction -= 2.0 * dot(normal, direction) * normal;
+    return direction;
+}
+
+
 struct RaycastInfo{
     bool hit; // if negative, the rest is undefined.
     float dist; // hit_info.entry_dist redundant?
-    ivec2 cell; //current_cell?
-    HitInfo hit_info; //has the entry norm etc.
+    //ivec2 cell; //current_cell?
+    IntersectionInfo hit_info; //has the entry norm etc.
     vec3 col; // TODO: replace with material
     //Ray ray; //just as a reference?
 };
@@ -194,7 +246,7 @@ RaycastInfo raycast(Ray ray){
     // "any hit" shader?
     RaycastInfo result;
     
-    HitInfo box = AABB(vec3(0.0, 0.0, HEIGHT_SCALE*0.5), vec3(1.0, 1.0, HEIGHT_SCALE*0.5), ray);
+    IntersectionInfo box = AABB(vec3(0.0, 0.0, HEIGHT_SCALE*0.5), vec3(1.0, 1.0, HEIGHT_SCALE*0.5), ray);
 
     vec3 entry = box.entry;
 
@@ -223,7 +275,7 @@ RaycastInfo raycast(Ray ray){
         }
 
         vec4 tex = sampleHeight(current_cell);
-        HitInfo pillar = pillar_hits(current_cell, tex.a, ray);
+        IntersectionInfo pillar = pillar_hits(current_cell, tex.a, ray);
 
         if (pillar.hit) {
             // "any hit" (side/top/bot) -> loop ends here
@@ -252,7 +304,7 @@ RaycastInfo raycast(Ray ray){
             vec3 flat_rd = vec3(ray.dir.xy, 0.0);
             Ray flat_ray = Ray(ray.origin, flat_rd, 1.0/flat_rd);
 
-            HitInfo grid = pillar_hits(current_cell, 1.0, flat_ray);
+            IntersectionInfo grid = pillar_hits(current_cell, 1.0, flat_ray);
             next_cell += ivec2(grid.exit_norm.xy); // TODO check if this norm is correct!
         }
         // for next iteration
@@ -323,8 +375,16 @@ float checkerboard(vec2 check_uv, float cells){
     return float(rows == cols);
 }
 
-vec4 sampleGround(vec3 ro, vec3 rd){
-    // for any ray that misses the heightmap
+struct HitInfo{
+    Material mat;
+    float dist;
+    vec3 norm;
+    vec3 pos;
+};
+
+
+HitInfo sampleGround(vec3 ro, vec3 rd){
+    HitInfo res;
     // TODO: rename to sample skybox maybe? as the ground is sorta part of that...
     float ground_height = 0.0;
     float ground_dist = (ground_height-ro.z)/rd.z;
@@ -333,7 +393,14 @@ vec4 sampleGround(vec3 ro, vec3 rd){
         // just some random skybox right now... could be improved of course!
         vec3 col = vec3(0.23, 0.59, 0.92)*exp(dot(SUN, rd)-0.8);
         col = clamp(col, vec3(0.0), vec3(1.0));
-        return vec4(col, 30.0); // some random distance that is positive!
+        
+        res.mat = sky;
+        
+        res.mat.col = col;
+        res.dist = 30.0;
+        res.pos = ro + rd*res.dist;
+        res.norm = -rd;
+        return res; // some random distance that is positive!
     }
 
     vec3 ground_hit = ro + (rd * ground_dist);
@@ -346,14 +413,72 @@ vec4 sampleGround(vec3 ro, vec3 rd){
     //val *= 2.5 - min(2.3, length((-SUN-ground_hit)));//,vec3(0.0,0.0,1.0));
 
     vec3 col = vec3(val);
-    return vec4(col, ground_dist);
+    res.mat = ground;
+    res.mat.col = col;
+    res.dist = ground_dist;
+    res.pos = ground_hit;
+    res.norm = vec3(0.0, 0.0, 1.0);
+    return res;
 }
+
+// TODO for montecarlo we need an external loop around this!
+HitInfo scene(Ray camera){
+    HitInfo res;
+    
+    // terrain
+    RaycastInfo terrain = raycast(camera);
+
+    // ball
+    IntersectionInfo ball = Sphere(SUN, 0.15, camera);
+
+    // five cases: just terrain hit, ball hit, both miss, both hit terrain closer, both hit ball closer
+    // idea: get all hits, then calculate closest (sorted?) and then return that. if none return background
+    // TODO: redo logic (dynamic arrays?)
+
+    if (terrain.hit && (!ball.hit || terrain.dist < ball.entry_dist)) {
+        // terrain infront of the ball
+        res.mat = chalk;
+        res.mat.col = terrain.col; // TODO: material construction
+        res.norm = terrain.hit_info.entry_norm;
+        res.pos = terrain.hit_info.entry;
+    } else if (ball.hit) {
+        // ball infront of the terrain
+        res.mat = glass; // TODO: glass material?
+        res.norm = ball.entry_norm;
+        res.pos = ball.entry;    
+    } else {
+        res = sampleGround(camera.origin, camera.dir);
+    }
+    
+
+    return res;
+}
+
+// follow ? https://www.shadertoy.com/view/7l3yRn
+struct RayRadiance{
+    vec3 radiance;
+    vec3 throughput_weight;
+};
+
+// TODO: sample hemisphere function
+// TODO: brdf kinda function where it gives you a new direction based on material.
+// TODO: calucalte the light from that brdf too? HitInfo2 -> RayRadiance, next_dir
+// multiple importance sampling? following: https://lisyarus.github.io/blog/posts/multiple-importance-sampling.html
+// idea being we sample the direct light or direction light once, and then do one random sample. weight them 50/50?
+// TODO: call scene below and loop it?
+// 1. cast scene, 2. accumulate light, 3. get next dir, LOOP
+// add a MAX_bounces or SPP var at the top.
+
+
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     // uv normalized to [-1..1] for height with more width
     vec2 uv = (2.0*fragCoord - iResolution.xy)/iResolution.y;
     vec2 mo = (2.0*iMouse.xy - iResolution.xy)/iResolution.y;
+    
+    
+    uvec2 seed = uvec2(fragCoord) ^ uvec2(iFrame << 16);
 
     //fragColor = texture(iChannel0, uv);
     //return;
@@ -424,7 +549,37 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     // caluclate and aggregate light throughput?
     // new ray direction based on sampled material/refraction?
 
-    Ray camera = Ray(ray_origin, ray_dir, 1.0/ray_dir);
+    Ray camera = newRay(ray_origin, ray_dir);
+    vec3 out_col = vec3(0.0);
+    vec3 radiance = vec3(0.0);
+    vec3 throughput_weight = vec3(1.0);
+    
+    int j;
+    for (j=0; j<SAMPLES; j++){
+        int i;
+        for(i=0; i<BOUNCES; i++){
+            HitInfo first_hit = scene(camera);
+            radiance += throughput_weight * first_hit.mat.emissivity;
+            // assume chalk for now, TODO: brdf function
+            vec3 rand_dir = sample_hemisphere(get_random_numbers(seed), first_hit.norm);
+            
+            // todo how to use roughness for reflection correctly?
+            vec3 next_dir = mix(reflect(camera.dir, first_hit.norm), rand_dir, first_hit.mat.roughness);
+            //vec3 next_dir = rand_dir;
+            throughput_weight *= first_hit.mat.col * 2.0 * max(0.0, dot(first_hit.norm, next_dir));
+
+            camera = newRay(first_hit.pos+0.0*next_dir, next_dir);
+        }
+        out_col += radiance;
+    }
+    out_col /= float(SAMPLES);
+    
+    
+    fragColor = vec4(out_col, 1.0);
+    
+    return;
+    
+    
 
     // actual stuff happening:
     RaycastInfo res = raycast(camera);
@@ -432,15 +587,16 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     //return; // early debug exit
     if (!res.hit) {
         // we missed the initial terrain
-        vec4 ground = sampleGround(ray_origin, ray_dir);
-        res.col = ground.rgb;
-        res.dist = ground.a;
-        res.hit_info.entry = ray_origin + (ray_dir*res.dist);
-        res.hit_info.entry_dist = res.dist;
-        res.hit_info.entry_norm = vec3(0.0, 0.0, 1.0); // ground hit poitns upwards, incorrect for skybox!
+        HitInfo ground_hit = sampleGround(ray_origin, ray_dir);
+        res.hit = true;
+        res.col = ground_hit.mat.col;
+        res.dist = ground_hit.dist;
+        res.hit_info.entry_norm = ground_hit.norm;
+        res.hit_info.entry = ground_hit.pos;
         
     }
     vec3 hit = res.hit_info.entry; // easier access
+
 
     // ro is a bit offset to reduce start intersections that are noisey ... want a better solution one day.
     Ray sun_check = Ray(hit+0.001*SUN, SUN, 1.0/SUN);
@@ -460,14 +616,14 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     vec3 col = res.col * max(0.1, light_amt);
     
     float ball_size = 0.15;
-    HitInfo ball = Sphere(SUN, ball_size, camera);
+    IntersectionInfo ball = Sphere(SUN, ball_size, camera);
     if (ball.hit && (!res.hit || ball.entry_dist < res.dist)){
         //col = vec3(0.9, 0.8, 0.2);
         float glass_IOR = 1.01;
         vec3 ball_reflection = refract(camera.dir, ball.entry_norm, 1.0/glass_IOR);
         Ray inside_ball = Ray(ball.entry, ball_reflection, 1.0/ball_reflection);
         // should refract a 2nd time at the exit of the sphere -.- (always hits??)
-        HitInfo inside = Sphere(SUN, ball_size, inside_ball);
+        IntersectionInfo inside = Sphere(SUN, ball_size, inside_ball);
         vec3 outside = refract(inside_ball.dir, inside.exit_norm, glass_IOR);
         Ray refracted = Ray(inside.exit, outside, 1.0/outside);
         RaycastInfo passed = raycast(refracted);
