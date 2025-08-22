@@ -3,7 +3,7 @@
   "info": {
     "id": "wXKSR1",
     "date": "1754246850",
-    "viewed": 56,
+    "viewed": 57,
     "name": "texture bitplanes",
     "username": "jakel101",
     "description": "https://en.wikipedia.org/wiki/Bit_plane somehow came up on Discord... here we show the reconstructed uin8 bitplanes but split into RGBA channels.\n\nbot left is Red, bot right is Green, top left is Blue and top right is Alpha!",
@@ -15,7 +15,7 @@
       "bitplane"
     ],
     "hasliked": 0,
-    "retrieved": "2025-08-22T23:01:26.400973+00:00"
+    "retrieved": "2025-08-22T23:16:35.055009+00:00"
   },
   "renderpass": [
     {

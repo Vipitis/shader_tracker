@@ -37,7 +37,7 @@
 # define FOV 90.0
 
 // how far "behind" the camera is behind the arcball
-# define CAMERA_DIST -0.75
+# define CAMERA_DIST -0.65
 
 // TODO one variable to change between sampled and direct light
 // 0 -> directional light
@@ -56,10 +56,10 @@ struct Material{
 };
 
 // exaples?
-Material chalk = Material(vec3(1.0), 0.0, 0.95, 0.0);
-Material ground = Material(vec3(0.5), 0.125, 0.35, 0.0);
-Material sky = Material(vec3(0.02, 0.03, 0.95), 0.35, 0.8, 0.5);
-Material glass = Material(vec3(1.0), 1.0, 0.5, 0.95);
+Material chalk = Material(vec3(1.0), 0.0, 0.1, 0.0);
+Material ground = Material(vec3(0.5), 0.05, 0.25, 0.0);
+Material sky = Material(vec3(0.02, 0.03, 0.95), 0.25, 0.8, 0.5);
+Material glass = Material(vec3(1.0), 1.0, 0.01, 0.95);
 
 
 ivec2 worldToCell(vec3 p) {
@@ -144,6 +144,10 @@ IntersectionInfo Sphere(vec3 center, float radius, Ray ray){
 
     res.entry_dist = min(t0, t1);
     res.exit_dist = max(t0, t1);
+    
+    if (res.entry_dist < 0.0 && res.exit_dist < 0.0){
+        res.hit = false;
+    }
 
     res.entry = ray.origin + ray.dir * res.entry_dist;
     res.exit = ray.origin + ray.dir * res.exit_dist;
@@ -568,7 +572,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
             //vec3 next_dir = rand_dir;
             throughput_weight *= first_hit.mat.col * 2.0 * max(0.0, dot(first_hit.norm, next_dir));
 
-            camera = newRay(first_hit.pos+0.0*next_dir, next_dir);
+            camera = newRay(first_hit.pos+0.001*next_dir, next_dir);
         }
         out_col += radiance;
     }
