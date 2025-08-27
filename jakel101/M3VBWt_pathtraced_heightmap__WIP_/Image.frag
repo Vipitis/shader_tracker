@@ -44,22 +44,21 @@
 // 1 -> point light
 // 2 -> MIS? (one light, one sampled?)
 // 3+ -> bounces//samples?
-# define BOUNCES 5
+# define BOUNCES 4
 # define SAMPLES 8
 
-// next project: actual structs for easier pathracing:
 struct Material{
     vec3 col; // ground color (or texture?)
     float emissivity; //emitted light in some unit?
-    float roughness; // or just fresnel? what kinda model are we doing?
+    float roughness; // invers reflectivity, sorta
     float translucency; // something like 1.0 for glass and 0.0 for solids? -> rays split/sample/refract??
 };
 
-// exaples?
-Material chalk = Material(vec3(1.0), 0.0, 0.1, 0.0);
-Material ground = Material(vec3(0.5), 0.05, 0.25, 0.0);
-Material sky = Material(vec3(0.02, 0.03, 0.95), 0.25, 0.8, 0.5);
-Material glass = Material(vec3(1.0), 1.0, 0.01, 0.95);
+// edit these here to change the look and feel!
+Material chalk = Material(vec3(1.0), 0.0, 0.65, 0.0);
+Material ground = Material(vec3(0.5), 0.0, 0.25, 0.0);
+Material sky = Material(vec3(0.02, 0.3, 0.85), 0.35, 1.0, 0.5);
+Material glass = Material(vec3(1.0), 1.99, 0.01, 0.95);
 
 
 ivec2 worldToCell(vec3 p) {
@@ -400,7 +399,7 @@ HitInfo sampleGround(vec3 ro, vec3 rd){
         
         res.mat = sky;
         
-        res.mat.col = col;
+        //res.mat.col = col; // no longer matches with "sky" - so gotta change the above maybe?
         res.dist = 30.0;
         res.pos = ro + rd*res.dist;
         res.norm = -rd;
@@ -409,7 +408,7 @@ HitInfo sampleGround(vec3 ro, vec3 rd){
 
     vec3 ground_hit = ro + (rd * ground_dist);
 
-    float val = checkerboard(ground_hit.xy, 8.0)* 0.1;
+    float val = checkerboard(ground_hit.xy, 8.0)* 0.25;
     val += 0.45;
     //val *= 2.0 - length(abs(ground_hit));
 
@@ -463,6 +462,49 @@ struct RayRadiance{
     vec3 radiance;
     vec3 throughput_weight;
 };
+
+// factored out to function so the seed changes correctly due to inout -.-
+vec3 get_ray_radiance(Ray camera, inout uvec2 seed){
+    //after get_ray_radiance in https://www.shadertoy.com/view/7l3yRn
+
+    vec3 radiance = vec3(0.0);
+    vec3 throughput_weight = vec3(1.0);
+
+    int i;
+    for(i=0; i<=BOUNCES; i++){
+        HitInfo first_hit = scene(camera);
+        radiance += throughput_weight * first_hit.mat.emissivity;
+
+        // TODO: equal-strict instead something else? new boolean attribute of the struct?
+        // if (first_hit.mat == sky){
+            // optimization idea: once you hit the sky, there is only one more bounce?
+            //radiance = vec3(0.0);
+            // i = BOUNCES-1; // causes this inner loop to exist next round ??
+            // break; // seems to exit both loops?
+        // }            
+
+        vec3 rand_dir = sample_hemisphere(get_random_numbers(seed), first_hit.norm);
+
+        // todo how to use roughness for reflection correctly?
+        vec3 next_dir = mix(reflect(camera.dir, first_hit.norm), rand_dir, first_hit.mat.roughness);
+
+        // if (i==BOUNCES-2){
+            // last direction is the light source? -> BIASED
+            //next_dir = normalize(SUN - first_hit.pos);
+            //throughput_weight *= inversesqrt(distance(SUN, first_hit.pos));
+        //}
+
+        //next_dir = rand_dir;
+        // weight for the next bounce.
+        throughput_weight *= first_hit.mat.col * 2.0 * max(0.0, dot(first_hit.norm, next_dir));
+
+        camera = newRay(first_hit.pos+0.001*next_dir, next_dir);
+    }
+
+    return radiance;
+}
+
+
 
 // TODO: sample hemisphere function
 // TODO: brdf kinda function where it gives you a new direction based on material.
@@ -555,95 +597,15 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
     Ray camera = newRay(ray_origin, ray_dir);
     vec3 out_col = vec3(0.0);
-    vec3 radiance = vec3(0.0);
-    vec3 throughput_weight = vec3(1.0);
-    
-    int j;
-    for (j=0; j<SAMPLES; j++){
-        int i;
-        for(i=0; i<BOUNCES; i++){
-            HitInfo first_hit = scene(camera);
-            radiance += throughput_weight * first_hit.mat.emissivity;
-            // assume chalk for now, TODO: brdf function
-            vec3 rand_dir = sample_hemisphere(get_random_numbers(seed), first_hit.norm);
             
-            // todo how to use roughness for reflection correctly?
-            vec3 next_dir = mix(reflect(camera.dir, first_hit.norm), rand_dir, first_hit.mat.roughness);
-            //vec3 next_dir = rand_dir;
-            throughput_weight *= first_hit.mat.col * 2.0 * max(0.0, dot(first_hit.norm, next_dir));
-
-            camera = newRay(first_hit.pos+0.001*next_dir, next_dir);
-        }
-        out_col += radiance;
+    int j;
+    for(j=0; j<SAMPLES; ++j){
+        vec3 rad = get_ray_radiance(camera, seed);
+        out_col += rad;
     }
+    // average color over all samples
     out_col /= float(SAMPLES);
     
-    
+    // TODO gamma correction?
     fragColor = vec4(out_col, 1.0);
-    
-    return;
-    
-    
-
-    // actual stuff happening:
-    RaycastInfo res = raycast(camera);
-    // fragColor = vec4(vec3(res.rgb),1.0);
-    //return; // early debug exit
-    if (!res.hit) {
-        // we missed the initial terrain
-        HitInfo ground_hit = sampleGround(ray_origin, ray_dir);
-        res.hit = true;
-        res.col = ground_hit.mat.col;
-        res.dist = ground_hit.dist;
-        res.hit_info.entry_norm = ground_hit.norm;
-        res.hit_info.entry = ground_hit.pos;
-        
-    }
-    vec3 hit = res.hit_info.entry; // easier access
-
-
-    // ro is a bit offset to reduce start intersections that are noisey ... want a better solution one day.
-    Ray sun_check = Ray(hit+0.001*SUN, SUN, 1.0/SUN);
-
-    RaycastInfo ref = raycast(sun_check); //reflection (the full shadow)
-    //ref.col *= 1.0 - step(0.0, ref.dist); // this makes misses black?
-    
-    // TODO: can we parameterize this via macros?
-    // float light1_amt = directional_light(sun_check, res.hit_info.entry_norm); // directional light
-    float light2_amt = point_light(hit, SUN, 1.0, res.hit_info.entry_norm);        
-    
-    
-    float light_amt; // = (light1_amt + light2_amt)* 0.5;
-    light_amt = light2_amt;
-    
-    // shitty ambient
-    vec3 col = res.col * max(0.1, light_amt);
-    
-    float ball_size = 0.15;
-    IntersectionInfo ball = Sphere(SUN, ball_size, camera);
-    if (ball.hit && (!res.hit || ball.entry_dist < res.dist)){
-        //col = vec3(0.9, 0.8, 0.2);
-        float glass_IOR = 1.01;
-        vec3 ball_reflection = refract(camera.dir, ball.entry_norm, 1.0/glass_IOR);
-        Ray inside_ball = Ray(ball.entry, ball_reflection, 1.0/ball_reflection);
-        // should refract a 2nd time at the exit of the sphere -.- (always hits??)
-        IntersectionInfo inside = Sphere(SUN, ball_size, inside_ball);
-        vec3 outside = refract(inside_ball.dir, inside.exit_norm, glass_IOR);
-        Ray refracted = Ray(inside.exit, outside, 1.0/outside);
-        RaycastInfo passed = raycast(refracted);
-        
-        col = 1.0 - passed.col*1.0;
-    }
-
-
-    // distance fog? I don't like it so it's commented out
-    // float dist_fog = transmittance(res.a *0.015);
-    // vec3 fog_col = vec3(0.4, 0.5, 0.9);
-    // col = mix(col, fog_col, 1.0-dist_fog);
-
-    // TODO: better "shadow" value via actually colored shadow??
-    // vec3 col2 = res.rgb + ref.rgb*0.3;
-    // col = vec3(uv.x > 0.0 ? col.rgb : col2.rgb);
-
-    fragColor = vec4(vec3(col),1.0);
 }
