@@ -24,6 +24,7 @@
 # define HEIGHT_SCALE 0.5
 
 # define CELLS ivec2(iChannelResolution[0].x, iChannelResolution[0].y)
+//# define CELLS ivec2(3)
 
 // unsure yet where to bring this!
 # define SUN normalize(vec3(sin(iDate.w*0.5), cos(iTime), HEIGHT_SCALE*1.5))
@@ -52,13 +53,14 @@ struct Material{
     float emissivity; //emitted light in some unit?
     float roughness; // invers reflectivity, sorta
     float translucency; // something like 1.0 for glass and 0.0 for solids? -> rays split/sample/refract??
+    float IOR; // index of refraction
 };
 
 // edit these here to change the look and feel!
-Material chalk = Material(vec3(1.0), 0.0, 0.65, 0.0);
-Material ground = Material(vec3(0.5), 0.0, 0.25, 0.0);
-Material sky = Material(vec3(0.02, 0.3, 0.85), 0.35, 1.0, 0.5);
-Material glass = Material(vec3(1.0), 1.99, 0.01, 0.95);
+Material chalk = Material(vec3(1.0),           0.0,  0.65,  0.0, 1.3);
+Material ground = Material(vec3(0.5),          0.0,  0.25,  0.0, 0.0);
+Material sky = Material(vec3(0.02, 0.3, 0.85), 1.0,  0.90,  0.0, 0.0);
+Material glass = Material(vec3(1.0),           0.0,  0.02,  0.9, 1.5);
 
 
 ivec2 worldToCell(vec3 p) {
@@ -154,7 +156,7 @@ IntersectionInfo Sphere(vec3 center, float radius, Ray ray){
     res.entry_norm = normalize(res.entry - center);
     res.exit_norm = normalize(res.exit - center);
     
-    res.inside = res.entry_dist < 0.0; // entry behind us
+    res.inside = res.entry_dist < 0.0 && res.exit_dist > 0.0; // entry behind us
 
     return res;
 }
@@ -383,6 +385,7 @@ struct HitInfo{
     float dist;
     vec3 norm;
     vec3 pos;
+    bool inside; // for doing glass rays!
 };
 
 
@@ -391,7 +394,8 @@ HitInfo sampleGround(vec3 ro, vec3 rd){
     // TODO: rename to sample skybox maybe? as the ground is sorta part of that...
     float ground_height = 0.0;
     float ground_dist = (ground_height-ro.z)/rd.z;
-    if (ground_dist < 0.0) {
+    // TODO: use the actual sphere for the "skybox"
+    if (ground_dist < 0.0 ||ground_dist > 10.0) {
         // essentially sky hit instead?
         // just some random skybox right now... could be improved of course!
         vec3 col = vec3(0.23, 0.59, 0.92)*exp(dot(SUN, rd)-0.8);
@@ -399,9 +403,11 @@ HitInfo sampleGround(vec3 ro, vec3 rd){
         
         res.mat = sky;
         
-        //res.mat.col = col; // no longer matches with "sky" - so gotta change the above maybe?
-        res.dist = 30.0;
+        res.mat.col = col; // no longer matches with "sky" - so gotta change the above maybe?
+        
+        res.dist = 10.0;
         res.pos = ro + rd*res.dist;
+        res.mat.emissivity *= clamp(smoothstep(res.dist - 8.1, res.dist- 3.0, res.pos.z), 0.0, 1.0);
         res.norm = -rd;
         return res; // some random distance that is positive!
     }
@@ -444,11 +450,23 @@ HitInfo scene(Ray camera){
         res.mat.col = terrain.col; // TODO: material construction
         res.norm = terrain.hit_info.entry_norm;
         res.pos = terrain.hit_info.entry;
+        res.inside = terrain.hit_info.inside;
+        if (res.inside) {
+            res.norm = terrain.hit_info.exit_norm;
+            res.pos = terrain.hit_info.exit;
+        }
+        
     } else if (ball.hit) {
         // ball infront of the terrain
         res.mat = glass; // TODO: glass material?
         res.norm = ball.entry_norm;
-        res.pos = ball.entry;    
+        res.pos = ball.entry;        
+        res.inside = ball.inside;
+        if (res.inside) {
+            res.norm = ball.exit_norm;
+            res.pos = ball.exit;
+        }
+        
     } else {
         res = sampleGround(camera.origin, camera.dir);
     }
@@ -463,6 +481,37 @@ struct RayRadiance{
     vec3 throughput_weight;
 };
 
+// reading: https://www.pbr-book.org/4ed/Radiometry,_Spectra,_and_Color/Surface_Reflection
+// further: https://www.pbr-book.org/4ed/Reflection_Models
+// watching maybe: https://youtu.be/wA1KVZ1eOuA
+vec3 brsf(in vec3 rd, in HitInfo hit, inout vec3 next_dir, inout uvec2 seed){
+    // returns the outgoing radiance?
+    // as well as the next ray direction. (inout)
+    
+    Material mat = hit.mat;
+    vec3 norm = hit.norm;
+    // naive reflection model
+    vec3 perfect_reflection = reflect(rd, norm);
+    next_dir = mix(perfect_reflection, next_dir, mat.roughness);
+    
+    //native transmission model
+
+    vec2 randoms = get_random_numbers(seed);
+    if (randoms.x < mat.translucency) {
+        float IOR = hit.inside ? mat.IOR : 1.0/mat.IOR;
+        vec3 reflect_norm = hit.inside ? norm : -norm;
+        vec3 perfect_refraction = refract(rd, -reflect_norm, IOR);
+        next_dir = mix(perfect_refraction, -next_dir, mat.roughness);
+        //next_dir = perfect_refraction;
+        norm = reflect_norm;
+    }
+
+    vec3 outgoing = mat.col * 2.0 * max(0.0, dot(norm, next_dir));
+    return outgoing;
+}
+
+
+
 // factored out to function so the seed changes correctly due to inout -.-
 vec3 get_ray_radiance(Ray camera, inout uvec2 seed){
     //after get_ray_radiance in https://www.shadertoy.com/view/7l3yRn
@@ -474,31 +523,13 @@ vec3 get_ray_radiance(Ray camera, inout uvec2 seed){
     for(i=0; i<=BOUNCES; i++){
         HitInfo first_hit = scene(camera);
         radiance += throughput_weight * first_hit.mat.emissivity;
-
-        // TODO: equal-strict instead something else? new boolean attribute of the struct?
-        // if (first_hit.mat == sky){
-            // optimization idea: once you hit the sky, there is only one more bounce?
-            //radiance = vec3(0.0);
-            // i = BOUNCES-1; // causes this inner loop to exist next round ??
-            // break; // seems to exit both loops?
-        // }            
-
-        vec3 rand_dir = sample_hemisphere(get_random_numbers(seed), first_hit.norm);
-
-        // todo how to use roughness for reflection correctly?
-        vec3 next_dir = mix(reflect(camera.dir, first_hit.norm), rand_dir, first_hit.mat.roughness);
-
-        // if (i==BOUNCES-2){
-            // last direction is the light source? -> BIASED
-            //next_dir = normalize(SUN - first_hit.pos);
-            //throughput_weight *= inversesqrt(distance(SUN, first_hit.pos));
-        //}
-
-        //next_dir = rand_dir;
-        // weight for the next bounce.
-        throughput_weight *= first_hit.mat.col * 2.0 * max(0.0, dot(first_hit.norm, next_dir));
-
-        camera = newRay(first_hit.pos+0.001*next_dir, next_dir);
+        
+        // initialize with random here??
+        vec3 next_dir = sample_hemisphere(get_random_numbers(seed), first_hit.norm);        
+        vec3 outgoing_radiance = brsf(camera.dir, first_hit, next_dir, seed);
+        
+        throughput_weight *= outgoing_radiance;
+        camera = newRay(first_hit.pos+0.0001*next_dir, next_dir);
     }
 
     return radiance;
