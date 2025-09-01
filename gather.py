@@ -8,7 +8,7 @@ from wgpu_shadertoy.api import _get_api_key, shadertoy_from_id
 import argparse
 
 arg_parser = argparse.ArgumentParser(description="Gather Shadertoy shaders to update")
-arg_parser.add_argument("ids", type=str, nargs="*", default=None, help="main arg, space separated list of shader IDs to update")
+arg_parser.add_argument("ids", type=str, nargs="*", default="", help="main arg, space separated list of shader IDs to update")
 arg_parser.add_argument("--lookback", type=int, default=2, help="Number of most recent shaders to update, defaults to 2")
 
 
@@ -65,8 +65,8 @@ if __name__ == "__main__":
         print(f"Found {len(missing_ids)} shader missing locally")
         # TODO: download only missing shaders (maybe via a CLI flag?)
 
-    if args.ids:
-        requested_ids = [r.strip().rstrip("/").split("/")[-1] for r in args.ids]
+    requested_ids = [r.strip().rstrip("/").split("/")[-1] for r in args.ids]
+    if requested_ids:
         print(f"Gathering {len(requested_ids)} shaders {requested_ids!r} as requested")
 
     ids_to_update = set.union(missing_ids, set(requested_ids))
@@ -80,7 +80,7 @@ if __name__ == "__main__":
         shader_data["Shader"]["info"]["retrieved"] = retrieval_time
         local_shaders.update({shader_id: shader_data["Shader"]})
 
-    all_data = [{"Shader":s} for i,s in local_shaders.items()]
+    all_data = [{"Shader":s} for i,s in sorted(local_shaders.items(), key=lambda item: item[1]["info"]["date"], reverse=True)]
 
     # TODO: only download all if flag is set
     # all_data = [] # maybe more like "new_data?"
