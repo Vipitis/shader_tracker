@@ -3,7 +3,7 @@
   "info": {
     "id": "wXVSR1",
     "date": "1754338508",
-    "viewed": 74,
+    "viewed": 84,
     "name": "Double Pendulum Datacube",
     "username": "jakel101",
     "description": "this idea came when I watched https://youtu.be/9gQQAO4I1Ck\nthe screenspace essentially picks different initial conditions, keeping track of position and momentum for the inner and outer pendulum. use mouse to inspect a specific pendulum!\n",
@@ -18,7 +18,7 @@
       "datacube"
     ],
     "hasliked": 0,
-    "retrieved": "2025-08-27T15:48:44.247118+00:00"
+    "retrieved": "2025-09-01T22:40:36.098288+00:00"
   },
   "renderpass": [
     {
