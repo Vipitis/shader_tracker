@@ -1,10 +1,10 @@
 // a few shared things
-# define RADIUS 0.25
+# define RADIUS 0.025
 # define BALL_SIZE RADIUS
 
 
 # define CELLS ivec2(64)
-# define HEIGHT_SCALE 0.5
+# define HEIGHT_SCALE 0.2
 
 
 ivec2 worldToCell(vec3 p) {

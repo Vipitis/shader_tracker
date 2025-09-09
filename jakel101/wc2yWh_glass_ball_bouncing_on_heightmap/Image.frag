@@ -10,7 +10,6 @@
 * 
 * work in progress:
 * todo(ideas):
-* - ball/area lights
 * - infinite/LOD tiles?
 * - DDA like traversal
 * - cleanup as usual
@@ -36,7 +35,7 @@
 # define FOV 90.0
 
 // how far "behind" the camera is behind the arcball
-# define CAMERA_DIST -0.65
+# define CAMERA_DIST 0.15
 
 
 // TODO one variable to change between sampled and direct light
@@ -56,10 +55,10 @@ struct Material{
 };
 
 // edit these here to change the look and feel!
-Material chalk = Material(vec3(1.0),           0.0,  0.25,  0.0, 1.3);
+Material chalk = Material(vec3(1.0),           0.0,  0.35,  0.0, 1.3);
 Material ground = Material(vec3(0.5),          0.0,  0.15,  0.0, 0.0);
 Material sky = Material(vec3(0.02, 0.3, 0.85), 0.5,  0.90,  0.0, 0.0);
-Material glass = Material(vec3(1.0),           0.1,  0.02,  1.0, 1.33);
+Material glass = Material(vec3(1.0),           0.05,  0.02,  1.0, 1.33);
 
 
 struct Ray{
@@ -422,7 +421,7 @@ HitInfo sampleGround(vec3 ro, vec3 rd){
 }
 
 // TODO for montecarlo we need an external loop around this!
-HitInfo scene(Ray camera, vec3 ball_pos){
+HitInfo scene(Ray camera, vec3 ball_pos, vec3 ball2_pos){
     HitInfo res;
     
     // terrain
@@ -430,37 +429,56 @@ HitInfo scene(Ray camera, vec3 ball_pos){
 
     // ball
     IntersectionInfo ball = Sphere(ball_pos, BALL_SIZE, camera);
+    IntersectionInfo ball2 = Sphere(ball2_pos, BALL_SIZE, camera); // TODO: ballsize in .w data point? so they can some how change dynamically?
 
     // five cases: just terrain hit, ball hit, both miss, both hit terrain closer, both hit ball closer
     // idea: get all hits, then calculate closest (sorted?) and then return that. if none return background
     // TODO: redo logic (dynamic arrays?)
+    
+    // easy solution: front to back... overdraws the ground tho.
+    res = sampleGround(camera.origin, camera.dir);
+    res.dist = 1000.0;
 
-    if (terrain.hit && (!ball.hit || terrain.dist < ball.entry_dist)) {
+    if (terrain.hit) { //  && (!ball.hit || terrain.dist < ball.entry_dist)
         // terrain infront of the ball
+        res.dist = terrain.hit_info.entry_dist;
         res.mat = chalk;
         res.mat.col = terrain.col; // TODO: material construction
         res.norm = terrain.hit_info.entry_norm;
         res.pos = terrain.hit_info.entry;
         res.inside = terrain.hit_info.inside;
         if (res.inside) {
+            res.dist = terrain.hit_info.exit_dist;
             res.norm = terrain.hit_info.exit_norm;
             res.pos = terrain.hit_info.exit;
         }
         
-    } else if (ball.hit) {
+    } if (ball.hit && ball.entry_dist < res.dist) {
         // ball infront of the terrain
+        res.dist = ball.entry_dist;
         res.mat = glass; // TODO: glass material?
         res.norm = ball.entry_norm;
         res.pos = ball.entry;        
         res.inside = ball.inside;
         if (res.inside) {
+            res.dist = ball.exit_dist;
             res.norm = ball.exit_norm;
             res.pos = ball.exit;
         }
-        
-    } else {
-        res = sampleGround(camera.origin, camera.dir);
-    }
+    } if (ball2.hit && ball2.entry_dist < res.dist) {
+        // ball infront of the terrain
+        res.dist = ball2.entry_dist;
+        res.mat = glass; // TODO: glass material?
+        res.mat.emissivity = 3.5; // 2nd ball is a light source!
+        res.norm = ball2.entry_norm;
+        res.pos = ball2.entry;        
+        res.inside = ball2.inside;
+        if (res.inside) {
+            res.dist = ball2.exit_dist;
+            res.norm = ball2.exit_norm;
+            res.pos = ball2.exit;
+        }        
+    } 
     
 
     return res;
@@ -504,7 +522,7 @@ vec3 brsf(in vec3 rd, in HitInfo hit, inout vec3 next_dir, inout uvec2 seed){
 
 
 // factored out to function so the seed changes correctly due to inout -.-
-vec3 get_ray_radiance(Ray camera, vec3 ball_pos, inout uvec2 seed){
+vec3 get_ray_radiance(Ray camera, vec3 ball_pos, vec3 ball2_pos, inout uvec2 seed){
     //after get_ray_radiance in https://www.shadertoy.com/view/7l3yRn
 
     vec3 radiance = vec3(0.0);
@@ -512,7 +530,7 @@ vec3 get_ray_radiance(Ray camera, vec3 ball_pos, inout uvec2 seed){
 
     int i;
     for(i=0; i<=BOUNCES; i++){
-        HitInfo first_hit = scene(camera, ball_pos);
+        HitInfo first_hit = scene(camera, ball_pos, ball2_pos);
         radiance += throughput_weight * first_hit.mat.emissivity;
         
         // initialize with random here??
@@ -547,7 +565,8 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     
     
     uvec2 seed = uvec2(fragCoord) ^ uvec2(iFrame << 16);
-
+    vec3 ball_pos = texelFetch(iChannel0, ivec2(0,0), 0).xyz;
+    vec3 ball2_pos = texelFetch(iChannel0, ivec2(8,0), 0).xyz; // janky proof of concept for now!
     //fragColor = texture(iChannel0, uv);
     //return;
 
@@ -569,19 +588,26 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         sin(azimuth)*cos(altitude),
         sin(altitude));
     // the camera is always looking "at" the origin or half way above it
-    vec3 look_dir = normalize(vec3(0.0, 0.0, HEIGHT_SCALE*0.5) - camera_pos);
+        
+    camera_pos = ball_pos + CAMERA_DIST*camera_pos;
+    
+    vec3 nodal = vec3(0.0, 0.0, HEIGHT_SCALE*0.5);
+    vec3 look_at = mix(ball_pos, nodal, 0.05); // so it's not crazy locked on 
+    
+    vec3 look_dir = normalize(look_at-camera_pos);
 
 
     // TODO moving the camera in and out over time??
-    camera_pos += look_dir * CAMERA_DIST; // moving the camera "back" to avoid occlusions?
+    //camera_pos += look_dir * CAMERA_DIST; // moving the camera "back" to avoid occlusions?
     // two vectors orthogonal to this camera direction (tagents?)
     //vec3 look_u = camera_pos + vec3(-sin(azimuth), cos(azimuth), 0.0);
     //vec3 look_v = camera_pos + vec3(sin(altitude)*-cos(azimuth), sin(altitude)*-sin(azimuth), cos(altitude));
 
 
     // turns out analytically these aren't correct. so using cross instead -.-
-    vec3 look_u = normalize(cross(vec3(0.0, 0.0, -1.0), look_dir));
-    vec3 look_v = normalize(cross(camera_pos, look_u)); // is this faster?
+    vec3 up_vec = vec3(0.0, 0.0, 1.0);
+    vec3 look_u = normalize(cross(look_dir, up_vec));
+    vec3 look_v = normalize(cross(look_u, look_dir)); // is this faster?
     // camera plane(origin of each pixel) -> barycentric?
 
     vec3 camera_plane;
@@ -620,11 +646,9 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     Ray camera = newRay(ray_origin, ray_dir);
     vec3 out_col = vec3(0.0);
 
-    vec3 ball_pos = texelFetch(iChannel0, ivec2(0,0), 0).xyz;
-
     int j;
     for(j=0; j<SAMPLES; ++j){
-        vec3 rad = get_ray_radiance(camera, ball_pos, seed);
+        vec3 rad = get_ray_radiance(camera, ball_pos, ball2_pos, seed);
         out_col += rad;
     }
     // average color over all samples

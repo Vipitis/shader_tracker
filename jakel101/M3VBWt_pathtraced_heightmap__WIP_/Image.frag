@@ -40,6 +40,8 @@
 // how far "behind" the camera is behind the arcball
 # define CAMERA_DIST -0.65
 
+# define BALL_SIZE 0.25
+
 // TODO one variable to change between sampled and direct light
 // 0 -> directional light
 // 1 -> point light
@@ -438,7 +440,7 @@ HitInfo scene(Ray camera){
     RaycastInfo terrain = raycast(camera);
 
     // ball
-    IntersectionInfo ball = Sphere(SUN, 0.15, camera);
+    IntersectionInfo ball = Sphere(SUN, BALL_SIZE, camera);
 
     // five cases: just terrain hit, ball hit, both miss, both hit terrain closer, both hit ball closer
     // idea: get all hits, then calculate closest (sorted?) and then return that. if none return background
@@ -513,23 +515,30 @@ vec3 brsf(in vec3 rd, in HitInfo hit, inout vec3 next_dir, inout uvec2 seed){
 
 
 // factored out to function so the seed changes correctly due to inout -.-
-vec3 get_ray_radiance(Ray camera, inout uvec2 seed){
+vec3 get_ray_radiance(HitInfo first_hit, Ray camera, inout uvec2 seed){
     //after get_ray_radiance in https://www.shadertoy.com/view/7l3yRn
 
-    vec3 radiance = vec3(0.0);
-    vec3 throughput_weight = vec3(1.0);
+    // because the first_hit is shared between samples, we can skip the traversal a few times
+    vec3 radiance = vec3(first_hit.mat.emissivity);
+    vec3 next_dir = sample_hemisphere(get_random_numbers(seed), first_hit.norm);
+    vec3 outgoing_radiance = brsf(camera.dir, first_hit, next_dir, seed);
+    vec3 throughput_weight = outgoing_radiance;
+    
+    Ray bounce = newRay(first_hit.pos+0.0001*next_dir, next_dir);
 
     int i;
-    for(i=0; i<=BOUNCES; i++){
-        HitInfo first_hit = scene(camera);
-        radiance += throughput_weight * first_hit.mat.emissivity;
-        
-        // initialize with random here??
-        vec3 next_dir = sample_hemisphere(get_random_numbers(seed), first_hit.norm);        
-        vec3 outgoing_radiance = brsf(camera.dir, first_hit, next_dir, seed);
+    for(i=0; i<BOUNCES; i++){
+        HitInfo hit = scene(bounce);
+        radiance += throughput_weight * hit.mat.emissivity;
+        // TODO: technically we could exit here early?
+        // random first and then mutated below
+        next_dir = sample_hemisphere(get_random_numbers(seed), hit.norm);        
+        outgoing_radiance = brsf(bounce.dir, hit, next_dir, seed);
         
         throughput_weight *= outgoing_radiance;
-        camera = newRay(first_hit.pos+0.0001*next_dir, next_dir);
+        if (lessThanEqual(throughput_weight,vec3(0.0))==bvec3(true)) break; // TODO benchmark if this even works as a speedup
+        //if (length(throughput_weight) <= 0.0) break; // version which I don't belive in...
+        bounce = newRay(hit.pos+0.0001*next_dir, next_dir);
     }
 
     return radiance;
@@ -537,8 +546,6 @@ vec3 get_ray_radiance(Ray camera, inout uvec2 seed){
 
 
 
-// TODO: sample hemisphere function
-// TODO: brdf kinda function where it gives you a new direction based on material.
 // TODO: calucalte the light from that brdf too? HitInfo2 -> RayRadiance, next_dir
 // multiple importance sampling? following: https://lisyarus.github.io/blog/posts/multiple-importance-sampling.html
 // idea being we sample the direct light or direction light once, and then do one random sample. weight them 50/50?
@@ -589,8 +596,8 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
 
     // turns out analytically these aren't correct. so using cross instead -.-
-    vec3 look_u = normalize(cross(vec3(0.0, 0.0, -1.0), look_dir));
-    vec3 look_v = normalize(cross(camera_pos, look_u)); // is this faster?
+    vec3 look_u = normalize(cross(look_dir, vec3(0.0, 0.0, 1.0)));
+    vec3 look_v = normalize(cross(look_u, look_dir)); // is this faster?
     // camera plane(origin of each pixel) -> barycentric?
 
     vec3 camera_plane;
@@ -628,10 +635,13 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
     Ray camera = newRay(ray_origin, ray_dir);
     vec3 out_col = vec3(0.0);
-            
+    
+    // primary rays happen here once per frame!
+    HitInfo first_hit = scene(camera);
+        
     int j;
     for(j=0; j<SAMPLES; ++j){
-        vec3 rad = get_ray_radiance(camera, seed);
+        vec3 rad = get_ray_radiance(first_hit, camera, seed);
         out_col += rad;
     }
     // average color over all samples
