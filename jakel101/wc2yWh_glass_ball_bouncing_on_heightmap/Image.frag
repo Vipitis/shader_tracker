@@ -55,10 +55,10 @@ struct Material{
 };
 
 // edit these here to change the look and feel!
-Material chalk = Material(vec3(1.0),           0.0,  0.35,  0.0, 1.3);
-Material ground = Material(vec3(0.5),          0.0,  0.15,  0.0, 0.0);
-Material sky = Material(vec3(0.02, 0.3, 0.85), 0.5,  0.90,  0.0, 0.0);
-Material glass = Material(vec3(1.0),           0.05,  0.02,  1.0, 1.33);
+Material chalk = Material(vec3(1.0),           0.0,  0.95,  0.0, 1.3);
+Material ground = Material(vec3(0.5),          0.0,  0.95,  0.0, 0.0);
+Material sky = Material(vec3(0.02, 0.3, 0.85), 0.2,  0.50,  0.0, 0.0);
+Material glass = Material(vec3(1.0),           0.0,  0.02,  1.0, 1.33);
 
 
 struct Ray{
@@ -435,25 +435,10 @@ HitInfo scene(Ray camera, vec3 ball_pos, vec3 ball2_pos){
     // idea: get all hits, then calculate closest (sorted?) and then return that. if none return background
     // TODO: redo logic (dynamic arrays?)
     
-    // easy solution: front to back... overdraws the ground tho.
-    res = sampleGround(camera.origin, camera.dir);
+    // front first?
     res.dist = 1000.0;
-
-    if (terrain.hit) { //  && (!ball.hit || terrain.dist < ball.entry_dist)
-        // terrain infront of the ball
-        res.dist = terrain.hit_info.entry_dist;
-        res.mat = chalk;
-        res.mat.col = terrain.col; // TODO: material construction
-        res.norm = terrain.hit_info.entry_norm;
-        res.pos = terrain.hit_info.entry;
-        res.inside = terrain.hit_info.inside;
-        if (res.inside) {
-            res.dist = terrain.hit_info.exit_dist;
-            res.norm = terrain.hit_info.exit_norm;
-            res.pos = terrain.hit_info.exit;
-        }
-        
-    } if (ball.hit && ball.entry_dist < res.dist) {
+    
+    if (ball.hit && ball.entry_dist < res.dist) {
         // ball infront of the terrain
         res.dist = ball.entry_dist;
         res.mat = glass; // TODO: glass material?
@@ -464,8 +449,9 @@ HitInfo scene(Ray camera, vec3 ball_pos, vec3 ball2_pos){
             res.dist = ball.exit_dist;
             res.norm = ball.exit_norm;
             res.pos = ball.exit;
-        }
-    } if (ball2.hit && ball2.entry_dist < res.dist) {
+       }      
+    } 
+    if (ball2.hit && ball2.entry_dist < res.dist) {
         // ball infront of the terrain
         res.dist = ball2.entry_dist;
         res.mat = glass; // TODO: glass material?
@@ -477,8 +463,26 @@ HitInfo scene(Ray camera, vec3 ball_pos, vec3 ball2_pos){
             res.dist = ball2.exit_dist;
             res.norm = ball2.exit_norm;
             res.pos = ball2.exit;
-        }        
-    } 
+        }
+    }
+    if (terrain.hit && terrain.hit_info.entry_dist < res.dist) {
+        // terrain infront of the ball
+        res.dist = terrain.hit_info.entry_dist;
+        res.mat = chalk;
+        res.mat.col = terrain.col; // TODO: material construction
+        res.norm = terrain.hit_info.entry_norm;
+        res.pos = terrain.hit_info.entry;
+        res.inside = terrain.hit_info.inside;
+        if (res.inside) {
+            res.dist = terrain.hit_info.exit_dist;
+            res.norm = terrain.hit_info.exit_norm;
+            res.pos = terrain.hit_info.exit;
+        }  
+    }
+    if (res.dist > 900.0) {
+        // miss here, but badly scaled "skybox"
+        res = sampleGround(camera.origin, camera.dir);
+    }
     
 
     return res;

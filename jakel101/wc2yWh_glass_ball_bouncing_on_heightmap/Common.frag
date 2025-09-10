@@ -1,5 +1,5 @@
 // a few shared things
-# define RADIUS 0.025
+# define RADIUS 0.035
 # define BALL_SIZE RADIUS
 
 
